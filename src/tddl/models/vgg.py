@@ -4,7 +4,7 @@ from torchvision import models
 # VGG16 based network for classifying between dogs and cats.
 # After training this will be an over parameterized network,
 # with potential to shrink it.
-class ModifiedVGG16Model(torch.nn.Module):
+class ModifiedVGG16Model(nn.Module):
     def __init__(self, model=None):
         super(ModifiedVGG16Model, self).__init__()
 

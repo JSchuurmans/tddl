@@ -24,7 +24,7 @@ class Trainer:
         for i, (batch, label) in enumerate(self.test_data_loader):
             batch = batch.cuda()
             t0 = time.time()
-            output = model(Variable(batch)).cpu() # TODO
+            output = self.model(Variable(batch)).cpu() # TODO
             t1 = time.time()
             total_time = total_time + (t1 - t0)
             pred = output.data.max(1)[1]
