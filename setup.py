@@ -5,11 +5,14 @@ base_requirements = [
     'torchvision',
     'tensorly',
     'tensorly-torch',
+    'tqdm',
 ]
 
 dev_requirements = [
     'jupyterlab',
     'kaggle',
+    'typer',
+    'tensorboard',
     # 'pytest',
     # 'pytest-flake8',
     # 'pytest-cov',
