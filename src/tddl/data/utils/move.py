@@ -1,10 +1,12 @@
-from pathlib import Path
 import os
 import shutil
+from pathlib import Path
+
 import typer
 from tqdm import tqdm
 
-def process_data(path):
+
+def move_classes(path):
     labels = ['cat', 'dog']
 
     path = Path(path)
@@ -21,6 +23,9 @@ def process_data(path):
         source = path.joinpath(filename)
         destination = path.joinpath(label, name)
         shutil.move(source, destination)
+
+
+
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ from tqdm import tqdm, trange
 
 
 class Trainer:
-    def __init__(self, train_path, test_path, model, optimizer, writer):
+    def __init__(self, train_path, test_path, model, optimizer, writer, save=None):
         self.train_data_loader = train_loader(train_path)
         self.test_data_loader = test_loader(test_path)
 
@@ -17,6 +17,19 @@ class Trainer:
         self.model.train()
 
         self.writer = writer
+
+        if save is None:
+            self.save_every_epoch = None
+            self.save_location = "./"
+            self.save_best = True
+            self.save_final = True
+            self.save_model_name = "model"
+        else:  # TODO make this not error when dict save is partially filled
+            self.save_every_epoch = save["save_every_epoch"]
+            self.save_location = save["save_location"]
+            self.save_best = save["save_best"]
+            self.save_final = save["save_final"]
+            self.save_model_name = save["save_model_name"]
 
     def test(self, loader=None):
         self.model.cuda()
@@ -32,31 +45,38 @@ class Trainer:
         for i, (batch, label) in enumerate(t):
             batch = batch.cuda()
             # t0 = time.time()
-            output = self.model(Variable(batch)).cpu() # TODO
+            output = self.model(Variable(batch)).cpu()  # TODO
             # t1 = time.time()
             # total_time = total_time + (t1 - t0)
             pred = output.data.max(1)[1]
             correct += pred.cpu().eq(label).sum()
             total += label.size(0)
-            # t.set_postfix(acc=float(correct) / total)
-        
+
         self.model.train()
         accuracy = float(correct) / total
 
         return accuracy
-        # print("Accuracy :", accuracy)
-        # print("Average prediction time", float(total_time) / (i + 1), i + 1)
 
-
-    def train(self, epoches=10):
-        for i in trange(epoches):
-            print("Epoch: ", i)
+    def train(self, epochs=10):
+        prev_acc = 0
+        for i in trange(epochs):
+            # print("Epoch: ", i)
             self.train_epoch()
+
             acc = self.test(loader=self.train_data_loader)
             self.writer.add_scalar("Accuracy/train", acc, i)
-        # writer.close()
-        # print("Finished fine tuning.")
-        
+
+            valid_acc = self.test(loader=self.test_data_loader)
+            self.writer.add_scalar("Accuracy/validation", valid_acc, i)
+            if valid_acc > prev_acc and self.save_best:
+                torch.save(self.model, self.save_location + f"/{self.save_model_name}_best")
+
+            if self.save_every_epoch is not None:
+                if (i+1) % self.save_every_epoch:
+                    torch.save(self.model, self.save_location + f"/{self.save_model_name}_{i}")
+
+        if self.save_final:
+            torch.save(self.model, self.save_location + f"/{self.save_model_name}_final")
 
     def train_batch(self, batch, label):
         self.model.zero_grad()
@@ -64,9 +84,8 @@ class Trainer:
         loss = self.criterion(self.model(input), Variable(label))
         loss.backward()
         self.optimizer.step()
-        
+
         return loss.item()
-        
 
     def train_epoch(self):
         t = tqdm(self.train_data_loader, total=int(len(self.test_data_loader)))
@@ -74,3 +93,5 @@ class Trainer:
             loss = self.train_batch(batch.cuda(), label.cuda())
             t.set_postfix(loss=loss)
             self.writer.add_scalar('Loss/train', loss, i)
+
+
