@@ -40,8 +40,10 @@ class Trainer:
 
         if loader is None:
             loader = self.test_data_loader
-        t = tqdm(loader, total=int(len(loader)))
+        if loader == "train":
+            loader = self.train_data_loader
 
+        t = tqdm(loader, total=int(len(loader)))
         for i, (batch, label) in enumerate(t):
             batch = batch.cuda()
             # t0 = time.time()
@@ -72,7 +74,7 @@ class Trainer:
                 torch.save(self.model, self.save_location + f"/{self.save_model_name}_best")
 
             if self.save_every_epoch is not None:
-                if (i+1) % self.save_every_epoch:
+                if (i+1) % self.save_every_epoch == 0:
                     torch.save(self.model, self.save_location + f"/{self.save_model_name}_{i}")
 
         if self.save_final:

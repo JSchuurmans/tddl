@@ -18,7 +18,8 @@ class ModifiedVGG16Model(nn.Module):
             nn.Dropout(),
             nn.Linear(4096, 4096),
             nn.ReLU(inplace=True),
-            nn.Linear(4096, 2))
+            nn.Linear(4096, 2)
+        )
 
     def forward(self, x):
         x = self.features(x)
