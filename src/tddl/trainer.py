@@ -6,9 +6,9 @@ from tqdm import tqdm, trange
 
 
 class Trainer:
-    def __init__(self, train_path, test_path, model, optimizer, writer, save=None):
-        self.train_data_loader = train_loader(train_path)
-        self.test_data_loader = test_loader(test_path)
+    def __init__(self, train_path, test_path, model, optimizer, writer, save=None, **kwargs):
+        self.train_data_loader = train_loader(train_path, **kwargs)
+        self.test_data_loader = test_loader(test_path, **kwargs)
 
         self.optimizer = optimizer
 
