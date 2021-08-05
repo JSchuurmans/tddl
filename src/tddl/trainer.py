@@ -1,16 +1,17 @@
 import time
 import torch
-from tddl.data.loaders import train_loader, test_loader
+# from tddl.data.loaders import gettrain_loader, test_loader
 from torch.autograd import Variable
 from tqdm import tqdm, trange
 
 
 class Trainer:
-    def __init__(self, train_path, test_path, model, optimizer, writer, save=None, **kwargs):
-        self.train_data_loader = train_loader(train_path, **kwargs)
-        self.test_data_loader = test_loader(test_path, **kwargs)
+    def __init__(self, train_loader, test_loader, model, optimizer, writer, scheduler=None, save=None, **kwargs):
+        self.train_data_loader = train_loader
+        self.test_data_loader = test_loader
 
         self.optimizer = optimizer
+        self.scheduler = scheduler if scheduler is not None else None
 
         self.model = model
         self.criterion = torch.nn.CrossEntropyLoss()
@@ -64,6 +65,8 @@ class Trainer:
         for i in trange(epochs):
             # print("Epoch: ", i)
             self.train_epoch()
+            if self.scheduler is not None:
+                self.scheduler.step()
 
             acc = self.test(loader=self.train_data_loader)
             self.writer.add_scalar("Accuracy/train", acc, i)

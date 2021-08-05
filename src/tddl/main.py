@@ -12,13 +12,17 @@ import tensorly as tl
 import tltorch
 from torchsummary import summary
 
+from tddl.data.loaders import get_train_loader, get_test_loader
+
 
 app = typer.Typer()
 
 @app.command()
 def train(
     epochs: int = 10,
-    logdir="/home/jetzeschuurman/gitProjects/phd/tddl/artifacts"
+    logdir="/home/jetzeschuurman/gitProjects/phd/tddl/artifacts",
+    train_path="/bigdata/dogs-vs-cats/train/",
+    valid_path="/bigdata/dogs-vs-cats/valid/",
 ):
     t = round(time())
     logdir = Path(logdir).joinpath(str(t))
@@ -30,18 +34,21 @@ def train(
         "save_model_name": "model"
     }
 
-    train_path = "/bigdata/dogs-vs-cats/train/"
-    valid_path = "/bigdata/dogs-vs-cats/valid/"
+    train_loader = get_train_loader(train_path)
+    valid_loader = get_test_loader(valid_path)
 
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
 
     model = ModifiedVGG16Model().cuda()
     optimizer = optim.SGD(model.classifier.parameters(), lr=0.0001, momentum=0.99)
-    trainer = Trainer(train_path, valid_path, model, optimizer, writer, save=save)
+
+
+    trainer = Trainer(train_loader, valid_loader, model, optimizer, writer, save=save)
 
     trainer.train(epochs=epochs)
 
     writer.close()
+
 
 @app.command()
 def decompose(
@@ -92,7 +99,7 @@ def decompose(
         "save_location": str(logdir),
         "save_best": True,
         "save_final": True,
-        "save_model_name": f"fact_model_{layer_type}_{layer_nr}_{factorization}_{lr}_{freeze_parameters}_"+str(with_init)
+        "save_model_name": f"fact_model_{layer_type}_{layer_nr}_{factorization}_r{rank}_l{lr}_{freeze_parameters}_"+str(with_init)
     }
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
 
