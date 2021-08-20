@@ -17,6 +17,7 @@ class Trainer:
         self.criterion = torch.nn.CrossEntropyLoss()
         self.model.train()
 
+        self.iteration = 0
         self.writer = writer
 
         if save is None:
@@ -97,6 +98,7 @@ class Trainer:
         for i, (batch, label) in enumerate(t):
             loss = self.train_batch(batch.cuda(), label.cuda())
             t.set_postfix(loss=loss)
-            self.writer.add_scalar('Loss/train', loss, i)
+            self.writer.add_scalar('Loss/train', loss, self.iteration)
+            self.iteration += 1
 
 
