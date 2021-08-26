@@ -45,7 +45,7 @@ def train(
 ):
 
     t = round(time())
-    MODEL_NAME = f"cnn-{conv1_out}-{conv2_out}_bn_{batch_size}_adam_l{lr}_g{gamma}"
+    MODEL_NAME = f"cnn-{conv1_out}-{conv2_out}_bn_{batch}_adam_l{lr}_g{gamma}"
     logdir = Path(logdir).joinpath(MODEL_NAME,str(t))
     save = {
         "save_every_epoch": 10,
@@ -83,7 +83,7 @@ def train(
 @app.command()
 def decompose(
     pretrained: str = "/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/mnist/cnn-32-32_bn_256_adam_l0.01_g0.9/1628155584/cnn_best",
-    layer_nrs: List[int] = 0,
+    layer_nrs: List[int] = [0],
     factorization: str = 'tucker',
     decompose_weights: bool = True,
     td_init: float = 0,
@@ -131,7 +131,7 @@ def decompose(
             fact_model._modules[name] = fact_layer
     print(fact_model)
 
-    MODEL_NAME = f"td-{layer_nr}-{factorization}-{rank}-d{str(decompose_weights)}-i{td_init}_bn_{batch}_adam_l{lr}_g{gamma}"
+    MODEL_NAME = f"td-{layer_nrs}-{factorization}-{rank}-d{str(decompose_weights)}-i{td_init}_bn_{batch}_adam_l{lr}_g{gamma}"
     t = round(time())
     logdir = Path(logdir).joinpath(MODEL_NAME,str(t))
     save = {

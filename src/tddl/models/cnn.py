@@ -50,6 +50,7 @@ class TdNet(Net):
     ):
         super().__init__(conv1_out=conv1_out, conv2_out=conv2_out, fc1_out=fc1_out)
         
+        #TODO this block should be redundant because it should be inherited from Net
         self.conv1 = nn.Conv2d(1, conv1_out, 3, 1)
         self.conv2 = nn.Conv2d(conv1_out, conv2_out, 3, 1)
         self.conv2_bn = nn.BatchNorm2d(conv2_out)

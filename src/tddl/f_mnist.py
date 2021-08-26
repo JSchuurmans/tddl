@@ -16,6 +16,8 @@ from torchvision import datasets, transforms
 from torch.optim import lr_scheduler
 
 from tddl.models.wrn import WideResNet
+from tddl.models.resnet import PA_ResNet18
+from tddl.models.resnet_lr import low_rank_resnet18
 from tddl.utils.prime_factors import get_prime_factors
 from tddl.data.sets import DatasetFromSubset
 
@@ -29,6 +31,7 @@ transform_train = transforms.Compose([
 ])
 
 transform_test = transforms.Compose([
+    transforms.ToTensor(),
     transforms.Normalize((0.1307,), (0.3081,)),
 ])
 
@@ -36,13 +39,13 @@ dataset = datasets.FashionMNIST('/bigdata/f_mnist', train=True, download=True)
 train_dataset, valid_dataset = torch.utils.data.random_split(
     dataset,
     (50000, 10000),
-    generator=torch.Generator().manual_seed(42)
+    generator=torch.Generator().manual_seed(42),
 )
 train_dataset = DatasetFromSubset(
     train_dataset, transform=transform_train,
 )
 valid_dataset = DatasetFromSubset(
-    train_dataset, transform=transform_test,
+    valid_dataset, transform=transform_test,
 )
 
 # test_dataset = datasets.FashionMNIST('/bigdata/f_mnist', train=False, transform=transform_test)
@@ -52,19 +55,19 @@ valid_dataset = DatasetFromSubset(
 @app.command()
 def train(
     batch: int = 256,
-    epochs: int = 300,
+    epochs: int = 200,
     logdir: str ="/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist",
     lr: float = 0.1,
     gamma: float = 0.1,
     dropout: float = 0.5,
-    model_name: str = "wrn",
-    depth: int = 28,
+    model_name: str = "parn",
+    depth: int = 18,
     width: int = 10,
 ):
 
     logdir = Path(logdir)
     if not logdir.is_dir():
-        raise FileNotFoundError("{0} folder does not exist!".format(l))
+        raise FileNotFoundError("{0} folder does not exist!".format(logdir))
     t = round(time())
     MODEL_NAME = f"{model_name}_{depth}_d{dropout}_{batch}_sgd_l{lr}_g{gamma}"
     logdir = logdir.joinpath(MODEL_NAME,str(t))
@@ -83,16 +86,25 @@ def train(
     
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
 
-    model = WideResNet(
-        depth=depth,
-        num_classes=10,
-        widen_factor=10,
-        dropRate=dropout,
-    ).cuda()
+    num_classes = 10
+    if model_name == 'wrn':
+        model = WideResNet(
+            depth=depth,
+            num_classes=num_classes,
+            widen_factor=width,
+            dropRate=dropout,
+        ).cuda()
+        milestones = [100, 150, 225]
+    elif model_name == "parn":
+        model = PA_ResNet18(
+            num_classes=num_classes, 
+            nc=1,
+        ).cuda()
+        milestones = [100, 150]
 
     # optimizer = optim.Adam(model.parameters(), lr=lr)
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4)
-    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[100, 150, 225], gamma=gamma)
+    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
     # scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
 
     trainer = Trainer(train_loader, valid_loader, model, optimizer, writer, scheduler=scheduler, save=save)
@@ -103,60 +115,49 @@ def train(
 
 @app.command()
 def decompose(
-    pretrained: str = "/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/mnist/cnn-32-32_bn_256_adam_l0.01_g0.9/1628155584/cnn_best",
-    layer_nrs: List[int] = 0,
+    layers: List[int],
+    pretrained: str = "/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist/parn_18_d0.5_256_sgd_l0.1_g0.1/1629473591/cnn_best",
     factorization: str = 'tucker',
-    decompose_weights: bool = True,
-    td_init: float = 0,
+    # decompose_weights: bool = True,
+    td_init: float = 0.02,
     rank: float = 0.5,
-    epochs: int = 10,
-    lr: float = 1e-2,
-    logdir: str = "/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/mnist",
-    freeze_parameters: bool = False,
+    epochs: int = 200,
+    lr: float = 0.1,
+    logdir: str = "/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist",
+    # freeze_parameters: bool = False,
     batch: int = 256,
-    gamma: float = 0.9,
+    gamma: float = 0,
+    model_name: str = "parn",
 ):
 
-    model = torch.load(pretrained)
-    fact_model = copy.deepcopy(model)
-    
-    # which parameters to train
-    # if freeze_parameters:
-    #     for param in fact_model.parameters():
-    #         param.requires_grad = False
+    if pretrained == "":
+        model = None
+        decompose_weights = False
+    else:
+        model = torch.load(pretrained)
+        decompose_weights = True
 
     if decompose_weights:
         td_init = False
 
-    # layer_nrs = [2,6] if layer_nr == 0 else [layer_nr]
-
-    for i, (name, module) in enumerate(model.named_modules()):
-        if i in layer_nrs:
-            if type(module) == torch.nn.modules.conv.Conv2d:
-                fact_layer = tltorch.FactorizedConv.from_conv(
-                    module, 
-                    rank=rank, 
-                    decompose_weights=decompose_weights, 
-                    factorization=factorization
-                )
-            elif type(module) == torch.nn.modules.linear.Linear:
-                fact_layer = tltorch.FactorizedLinear.from_linear(
-                    module, 
-                    in_tensorized_features=get_prime_factors(module.in_features), 
-                    out_tensorized_features=get_prime_factors(module.out_features), 
-                    rank=rank,
-                    factorization=factorization,
-                )
-            if td_init:
-                fact_layer.weight.normal_(0, td_init)
-            fact_model._modules[name] = fact_layer
-    print(fact_model)
-
-    MODEL_NAME = f"td-{layer_nr}-{factorization}-{rank}-d{str(decompose_weights)}-i{td_init}_bn_{batch}_adam_l{lr}_g{gamma}"
+    fact_model = low_rank_resnet18(
+        layers=layers,
+        rank=rank,
+        decompose_weights=decompose_weights,
+        factorization=factorization,
+        init=td_init,
+        pretrained_model=model,
+    ).cuda()
+    
+    logdir = Path(logdir)
+    if not logdir.is_dir():
+        raise FileNotFoundError("{0} folder does not exist!".format(logdir))
+    td = "td" if pretrained != "" else "lr"
+    MODEL_NAME = f"{model_name}-{td}-{layers}-{factorization}-{rank}-d{str(decompose_weights)}-i{td_init}_bn_{batch}_sgd_l{lr}_g{gamma}"
     t = round(time())
-    logdir = Path(logdir).joinpath(MODEL_NAME,str(t))
+    logdir = logdir.joinpath(MODEL_NAME, str(t))
     save = {
-        "save_every_epoch": 1,
+        "save_every_epoch": None,
         "save_location": str(logdir),
         "save_best": True,
         "save_final": True,
@@ -164,22 +165,28 @@ def decompose(
     }
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
 
-    optimizer = optim.Adam(
-        filter(lambda p: p.requires_grad, fact_model.parameters()),
-        lr=lr
+    # TODO change back to Adam
+    # optimizer = optim.Adam(
+    #     filter(lambda p: p.requires_grad, fact_model.parameters()),
+    #     lr=lr
+    # )
+    optimizer = optim.SGD(
+        fact_model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4
     )
-    scheduler = StepLR(optimizer, step_size=1, gamma=gamma) if gamma else None
+    scheduler = lr_scheduler.StepLR(optimizer, step_size=1, gamma=gamma) if gamma else None
+    if pretrained == "":
+        scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[100,150], gamma=gamma)
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch)
     valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch)
 
-    trainer = Trainer(train_loader, valid_loader, model, optimizer, writer, scheduler=scheduler, save=save)
-    trainer.train(epochs=epochs)
+    trainer = Trainer(train_loader, valid_loader, fact_model, optimizer, writer, scheduler=scheduler, save=save)
     
-    train_acc = trainer.test(loader="train")
-    writer.add_scalar("Accuracy/before_finetuning/train", train_acc)
-    valid_acc = trainer.test()
-    writer.add_scalar("Accuracy/before_finetuning/valid", valid_acc)
+    if pretrained != "":
+        train_acc = trainer.test(loader="train")
+        writer.add_scalar("Accuracy/before_finetuning/train", train_acc)
+        valid_acc = trainer.test()
+        writer.add_scalar("Accuracy/before_finetuning/valid", valid_acc)
 
     trainer.train(epochs=epochs)
 

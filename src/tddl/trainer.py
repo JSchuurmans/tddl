@@ -77,9 +77,8 @@ class Trainer:
             if valid_acc > prev_acc and self.save_best:
                 torch.save(self.model, self.save_location + f"/{self.save_model_name}_best")
 
-            if self.save_every_epoch is not None:
-                if (i+1) % self.save_every_epoch == 0:
-                    torch.save(self.model, self.save_location + f"/{self.save_model_name}_{i}")
+            if self.save_every_epoch is not None and (i+1) % self.save_every_epoch == 0:
+                torch.save(self.model, self.save_location + f"/{self.save_model_name}_{i}")
 
         if self.save_final:
             torch.save(self.model, self.save_location + f"/{self.save_model_name}_final")
