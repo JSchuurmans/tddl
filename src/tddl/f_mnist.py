@@ -63,6 +63,7 @@ def train(
     model_name: str = "parn",
     depth: int = 18,
     width: int = 10,
+    data_workers: int = 1,
 ):
 
     logdir = Path(logdir)
@@ -80,8 +81,8 @@ def train(
     }
 
     # TODO add data augmentation
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch)
-    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
+    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch, num_workers=data_workers)
     # test_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
     
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
