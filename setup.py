@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 
 base_requirements = [
-    'torch',
-    'torchvision',
-    'tensorly',
-    'tensorly-torch',
+    # 'torch',
+    # 'torchvision',
+    # 'tensorly',
+    # 'tensorly-torch',
     'tqdm',
     'typer',
 ]
