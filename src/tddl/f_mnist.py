@@ -1,25 +1,22 @@
 from time import time
-import copy
 from pathlib import Path
 from typing import List
 
-import typer
 import torch
 import torch.optim as optim
+from torch.optim import lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 from tddl.trainer import Trainer
-import tensorly as tl
-import tltorch
-from torchsummary import summary
 
 from torchvision import datasets, transforms
-from torch.optim import lr_scheduler
 
 from tddl.models.wrn import WideResNet
 from tddl.models.resnet import PA_ResNet18
 from tddl.models.resnet_lr import low_rank_resnet18
-from tddl.utils.prime_factors import get_prime_factors
 from tddl.data.sets import DatasetFromSubset
+from tddl.utils.random import set_seed
+
+import typer
 
 app = typer.Typer()
 
@@ -64,13 +61,17 @@ def train(
     depth: int = 18,
     width: int = 10,
     data_workers: int = 1,
+    seed: int = None,
 ):
 
     logdir = Path(logdir)
     if not logdir.is_dir():
         raise FileNotFoundError("{0} folder does not exist!".format(logdir))
     t = round(time())
-    MODEL_NAME = f"{model_name}_{depth}_d{dropout}_{batch}_sgd_l{lr}_g{gamma}"
+    if seed is None:
+        seed = t
+    set_seed(seed)
+    MODEL_NAME = f"{model_name}_{depth}_d{dropout}_{batch}_sgd_l{lr}_g{gamma}_s{seed == t}"
     logdir = logdir.joinpath(MODEL_NAME,str(t))
     save = {
         "save_every_epoch": 10,
@@ -129,6 +130,7 @@ def decompose(
     batch: int = 256,
     gamma: float = 0,
     model_name: str = "parn",
+    seed: int = None,
 ):
 
     if pretrained == "":
@@ -154,8 +156,11 @@ def decompose(
     if not logdir.is_dir():
         raise FileNotFoundError("{0} folder does not exist!".format(logdir))
     td = "td" if pretrained != "" else "lr"
-    MODEL_NAME = f"{model_name}-{td}-{layers}-{factorization}-{rank}-d{str(decompose_weights)}-i{td_init}_bn_{batch}_sgd_l{lr}_g{gamma}"
     t = round(time())
+    if seed is None:
+        seed = t
+    set_seed(seed)
+    MODEL_NAME = f"{model_name}-{td}-{layers}-{factorization}-{rank}-d{str(decompose_weights)}-i{td_init}_bn_{batch}_sgd_l{lr}_g{gamma}_s{seed == t}"
     logdir = logdir.joinpath(MODEL_NAME, str(t))
     save = {
         "save_every_epoch": None,
@@ -189,55 +194,6 @@ def decompose(
         valid_acc = trainer.test()
         writer.add_scalar("Accuracy/before_finetuning/valid", valid_acc)
 
-    trainer.train(epochs=epochs)
-
-    writer.close()
-
-
-@app.command()
-def low_rank(
-    layer_nrs: List[int],
-    factorization: str = 'tucker',
-    td_init: float = 0.02,
-    rank: float = 0.5,
-    epochs: int = 20,
-    lr: float = 1e-2,
-    logdir: str = "/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/mnist",
-    batch: int = 256,
-    gamma: float = 0.9,
-    conv1_out: int = 32,
-    conv2_out: int = 32,
-    fc1_out: int = 128
-):
-    model = TdNet(
-        conv1_out=conv1_out, conv2_out=conv2_out, fc1_out=fc1_out, 
-        layer_nrs=layer_nrs, rank=rank, factorization=factorization, td_init=td_init,
-    ).cuda()
-
-    print(model)
-
-    MODEL_NAME = f"lr-{conv1_out}-{conv2_out}-{layer_nrs}-{factorization}-{rank}-i{td_init}_bn_{batch}_adam_l{lr}_g{gamma}"
-    t = round(time())
-    logdir = Path(logdir).joinpath(MODEL_NAME,str(t))
-    save = {
-        "save_every_epoch": 1,
-        "save_location": str(logdir),
-        "save_best": True,
-        "save_final": True,
-        "save_model_name": f"fact_model"
-    }
-    writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
-
-    optimizer = optim.Adam(
-        model.parameters(),
-        lr=lr
-    )
-    scheduler = StepLR(optimizer, step_size=1, gamma=gamma) if gamma else None
-
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch)
-    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch)
-
-    trainer = Trainer(train_loader, valid_loader, model, optimizer, writer, scheduler=scheduler, save=save)
     trainer.train(epochs=epochs)
 
     writer.close()

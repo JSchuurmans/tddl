@@ -17,6 +17,7 @@ import tltorch
 from tddl.trainer import Trainer
 from tddl.models.cnn import Net, TdNet
 from tddl.utils.prime_factors import get_prime_factors
+from tddl.utils.random import set_seed
 
 import typer
 
@@ -31,11 +32,6 @@ transform=transforms.Compose([
 dataset = datasets.MNIST('/bigdata/mnist', train=True, download=True, transform=transform)
 train_dataset, valid_dataset = torch.utils.data.random_split(dataset, (50000, 10000), generator=torch.Generator().manual_seed(42))
 test_dataset = datasets.MNIST('/bigdata/mnist', train=False, transform=transform)
-
-def set_seed(seed):
-    torch.manual_seed(seed)
-    random.seed(seed)
-    np.random.seed(seed)
 
 
 @app.command()
