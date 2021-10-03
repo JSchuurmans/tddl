@@ -81,7 +81,6 @@ def train(
     
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
     model = Net(conv1_out=conv1, conv2_out=conv2).cuda()
-    # TODO why not Adam ?
     optimizer = optim.Adam(model.parameters(), lr=lr)
     scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
 
@@ -105,6 +104,7 @@ def decompose(
     freeze_parameters: bool = False,
     batch: int = 256,
     gamma: float = 0.9,
+    seed: int = None,
 ):
 
     model = torch.load(pretrained)
@@ -142,13 +142,11 @@ def decompose(
             fact_model._modules[name] = fact_layer
     print(fact_model)
 
-    MODEL_NAME = f"td-{layer_nrs}-{factorization}-{rank}-d{str(decompose_weights)}-i{td_init}_bn_{batch}_adam_l{lr}_g{gamma}"
     t = round(time())
-
     if seed is None:
         seed = t
     set_seed(seed)
-    
+    MODEL_NAME = f"td-{layer_nrs}-{factorization}-{rank}-d{str(decompose_weights)}-i{td_init}_bn_{batch}_adam_l{lr}_g{gamma}_s{seed == t}"
     logdir = Path(logdir).joinpath(MODEL_NAME,str(t))
     save = {
         "save_every_epoch": 1,
@@ -194,7 +192,8 @@ def low_rank(
     gamma: float = 0.9,
     conv1_out: int = 32,
     conv2_out: int = 32,
-    fc1_out: int = 128
+    fc1_out: int = 128,
+    seed: int = None,
 ):
     model = TdNet(
         conv1_out=conv1_out, conv2_out=conv2_out, fc1_out=fc1_out, 
@@ -203,8 +202,11 @@ def low_rank(
 
     print(model)
 
-    MODEL_NAME = f"lr-{conv1_out}-{conv2_out}-{layer_nrs}-{factorization}-{rank}-i{td_init}_bn_{batch}_adam_l{lr}_g{gamma}"
     t = round(time())
+    if seed is None:
+        seed = t
+    set_seed(seed)
+    MODEL_NAME = f"lr-{conv1_out}-{conv2_out}-{layer_nrs}-{factorization}-{rank}-i{td_init}_bn_{batch}_adam_l{lr}_g{gamma}_s{seed == t}"
     logdir = Path(logdir).joinpath(MODEL_NAME,str(t))
     save = {
         "save_every_epoch": 1,
