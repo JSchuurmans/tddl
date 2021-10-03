@@ -1,24 +1,25 @@
 from time import time
 import copy
+import random
 from pathlib import Path
 from typing import List
 
-import typer
+import numpy as np
+
 import torch
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
-# from tddl.models.vgg import ModifiedVGG16Model
-from tddl.trainer import Trainer
-import tensorly as tl
-import tltorch
-from torchsummary import summary
-
-from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
+from torchvision import datasets, transforms
 
+import tltorch
+
+from tddl.trainer import Trainer
 from tddl.models.cnn import Net, TdNet
-
 from tddl.utils.prime_factors import get_prime_factors
+
+import typer
+
 
 app = typer.Typer()
 
@@ -31,6 +32,10 @@ dataset = datasets.MNIST('/bigdata/mnist', train=True, download=True, transform=
 train_dataset, valid_dataset = torch.utils.data.random_split(dataset, (50000, 10000), generator=torch.Generator().manual_seed(42))
 test_dataset = datasets.MNIST('/bigdata/mnist', train=False, transform=transform)
 
+def set_seed(seed):
+    torch.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)
 
 
 @app.command()
@@ -40,12 +45,18 @@ def train(
     logdir="/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/mnist",
     lr: float = 0.001,
     gamma: float = 0.9,
-    conv1_out: int = 32,
-    conv2_out: int = 64,
+    conv1: int = 32,
+    conv2: int = 64,
+    seed: int = None,
 ):
 
     t = round(time())
-    MODEL_NAME = f"cnn-{conv1_out}-{conv2_out}_bn_{batch}_adam_l{lr}_g{gamma}"
+    
+    if seed is None:
+        seed = t
+    set_seed(seed)
+
+    MODEL_NAME = f"cnn-{conv1}-{conv2}_bn_{batch}_adam_l{lr}_g{gamma}_s{seed == t}"
     logdir = Path(logdir).joinpath(MODEL_NAME,str(t))
     save = {
         "save_every_epoch": 10,
@@ -69,7 +80,7 @@ def train(
     # test_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
     
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
-    model = Net(conv1_out=conv1_out, conv2_out=conv2_out).cuda()
+    model = Net(conv1_out=conv1, conv2_out=conv2).cuda()
     # TODO why not Adam ?
     optimizer = optim.Adam(model.parameters(), lr=lr)
     scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
@@ -133,6 +144,11 @@ def decompose(
 
     MODEL_NAME = f"td-{layer_nrs}-{factorization}-{rank}-d{str(decompose_weights)}-i{td_init}_bn_{batch}_adam_l{lr}_g{gamma}"
     t = round(time())
+
+    if seed is None:
+        seed = t
+    set_seed(seed)
+    
     logdir = Path(logdir).joinpath(MODEL_NAME,str(t))
     save = {
         "save_every_epoch": 1,

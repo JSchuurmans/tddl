@@ -3,8 +3,8 @@ import tltorch
 from tddl.utils.prime_factors import get_prime_factors
 
 def factorize_layer(
-        module, 
-        rank=0.5, 
+        module,
+        rank=0.5,
         factorization='tucker', 
         decompose_weights=True,
         fixed_rank_modes=None,
