@@ -3,15 +3,15 @@ from setuptools import setup, find_packages
 base_requirements = [
     # 'torch',
     # 'torchvision',
-    # 'tensorly',
-    # 'tensorly-torch',
+    'tensorly',
+    'tensorly-torch',
     'tqdm',
     'typer',
 ]
 
 dev_requirements = [
     'jupyterlab',
-    'kaggle',
+    # 'kaggle',
     'tensorboard',
     # 'pytest',
     # 'pytest-flake8',
