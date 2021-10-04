@@ -9,12 +9,17 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
     else:
         model = pretrained_model.cpu()
 
+    decomposition_kwargs = {'init': 'random'} if factorization == 'cp' else {}
+    fixed_rank_modes = 'spatial' if factorization == 'tucker' else None
+    
     if 0 in layers:
         model.conv1 = tltorch.FactorizedConv.from_conv(
                 model.conv1, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init is not None:
             model.conv1.weight.normal_(0, init)
@@ -25,7 +30,9 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
                 model.layer1[0].conv1, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init:
             model.layer1[0].conv1.weight.normal_(0, init)
@@ -34,7 +41,9 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
                 model.layer1[0].conv2, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init:
             model.layer1[0].conv2.weight.normal_(0, init)
@@ -43,7 +52,9 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
                 model.layer1[1].conv1, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init:
             model.layer1[1].conv1.weight.normal_(0, init)
@@ -52,7 +63,9 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
                 model.layer1[1].conv2, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init:
             model.layer1[1].conv2.weight.normal_(0, init)
@@ -63,7 +76,9 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
                 model.layer2[0].conv1, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init:
             model.layer2[0].conv1.weight.normal_(0, init)
@@ -72,7 +87,9 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
                 model.layer2[0].conv2, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init:
             model.layer2[0].conv2.weight.normal_(0, init)
@@ -81,7 +98,9 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
                 model.layer2[1].conv1, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init:
             model.layer2[1].conv1.weight.normal_(0, init)
@@ -90,7 +109,9 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
                 model.layer2[1].conv2, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init:
             model.layer2[1].conv2.weight.normal_(0, init)
@@ -101,7 +122,9 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
                 model.layer3[0].conv1, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init:
             model.layer3[0].conv1.weight.normal_(0, init)
@@ -110,7 +133,9 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
                 model.layer3[0].conv2, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init:
             model.layer3[0].conv2.weight.normal_(0, init)
@@ -119,7 +144,9 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
                 model.layer3[1].conv1, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init:
             model.layer3[1].conv1.weight.normal_(0, init)
@@ -128,7 +155,9 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
                 model.layer3[1].conv2, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init:
             model.layer3[1].conv2.weight.normal_(0, init)
@@ -139,7 +168,9 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
                 model.layer4[0].conv1, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init:
             model.layer4[0].conv1.weight.normal_(0, init)
@@ -148,7 +179,9 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
                 model.layer4[0].conv2, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init:
             model.layer4[0].conv2.weight.normal_(0, init)
@@ -157,7 +190,9 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
                 model.layer4[1].conv1, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init:
             model.layer4[1].conv1.weight.normal_(0, init)
@@ -166,7 +201,9 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
                 model.layer4[1].conv2, 
                 rank=rank, 
                 decompose_weights=decompose_weights, 
-                factorization=factorization
+                factorization=factorization,
+                decomposition_kwargs=decomposition_kwargs,
+                fixed_rank_modes=fixed_rank_modes,
             )
         if init:
             model.layer4[1].conv2.weight.normal_(0, init)
@@ -180,6 +217,7 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
             out_tensorized_features=get_prime_factors(module.out_features), 
             rank=rank,
             factorization=factorization,
+            decomposition_kwargs=decomposition_kwargs,
         )
         if init:
             model.conv1.weight.normal_(0, init)

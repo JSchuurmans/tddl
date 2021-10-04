@@ -6,7 +6,7 @@ from tqdm import tqdm, trange
 
 
 class Trainer:
-    def __init__(self, train_loader, test_loader, model, optimizer, writer, scheduler=None, save=None, **kwargs):
+    def __init__(self, train_loader, test_loader, model, optimizer, writer, scheduler=None, save=None, results={}, **kwargs):
         self.train_data_loader = train_loader
         self.test_data_loader = test_loader
 
@@ -19,6 +19,7 @@ class Trainer:
 
         self.iteration = 0
         self.writer = writer
+        self.results = results
 
         if save is None:
             self.save_every_epoch = None
@@ -62,9 +63,8 @@ class Trainer:
         return accuracy
 
     def train(self, epochs=10):
-        prev_acc = 0
+        best_acc = 0
         for i in trange(epochs):
-            # print("Epoch: ", i)
             self.train_epoch()
             if self.scheduler is not None:
                 self.scheduler.step()
@@ -74,14 +74,22 @@ class Trainer:
 
             valid_acc = self.test(loader=self.test_data_loader)
             self.writer.add_scalar("Accuracy/validation", valid_acc, i)
-            if valid_acc > prev_acc and self.save_best:
+            if valid_acc > best_acc and self.save_best:
+                self.results['best_epoch'] = i
+                self.results['best_train_acc'] = acc
+                self.results['best_valid_acc'] = valid_acc
                 torch.save(self.model, self.save_location + f"/{self.save_model_name}_best")
+                best_acc = valid_acc
 
             if self.save_every_epoch is not None and (i+1) % self.save_every_epoch == 0:
                 torch.save(self.model, self.save_location + f"/{self.save_model_name}_{i}")
 
+            #TODO tabulate results
+
         if self.save_final:
             torch.save(self.model, self.save_location + f"/{self.save_model_name}_final")
+        
+        return self.results
 
     def train_batch(self, batch, label):
         self.model.zero_grad()

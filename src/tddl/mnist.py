@@ -1,10 +1,8 @@
 from time import time
 import copy
-import random
 from pathlib import Path
 from typing import List
-
-import numpy as np
+import json
 
 import torch
 import torch.optim as optim
@@ -18,6 +16,7 @@ from tddl.trainer import Trainer
 from tddl.models.cnn import Net, TdNet
 from tddl.utils.prime_factors import get_prime_factors
 from tddl.utils.random import set_seed
+from tddl.models.utils import count_parameters
 
 import typer
 
@@ -32,6 +31,7 @@ transform=transforms.Compose([
 dataset = datasets.MNIST('/bigdata/mnist', train=True, download=True, transform=transform)
 train_dataset, valid_dataset = torch.utils.data.random_split(dataset, (50000, 10000), generator=torch.Generator().manual_seed(42))
 test_dataset = datasets.MNIST('/bigdata/mnist', train=False, transform=transform)
+
 
 
 @app.command()
@@ -55,7 +55,7 @@ def train(
     MODEL_NAME = f"cnn-{conv1}-{conv2}_bn_{batch}_adam_l{lr}_g{gamma}_s{seed == t}"
     logdir = Path(logdir).joinpath(MODEL_NAME,str(t))
     save = {
-        "save_every_epoch": 10,
+        "save_every_epoch": None,
         "save_location": str(logdir),
         "save_best": True,
         "save_final": True,
@@ -77,19 +77,25 @@ def train(
     
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
     model = Net(conv1_out=conv1, conv2_out=conv2).cuda()
+    n_param = count_parameters(model)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
 
     trainer = Trainer(train_loader, valid_loader, model, optimizer, writer, scheduler=scheduler, save=save)
-    trainer.train(epochs=epochs)
+    results = trainer.train(epochs=epochs)
+
+    results['n_param'] = n_param
+    results['model_name'] = MODEL_NAME
+    with open(logdir.joinpath('results.json'), 'w') as f:
+        json.dump(results, f)
 
     writer.close()
 
 
 @app.command()
 def decompose(
+    layer_nrs: List[int],
     pretrained: str = "/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/mnist/cnn-32-32_bn_256_adam_l0.01_g0.9/1628155584/cnn_best",
-    layer_nrs: List[int] = [0],
     factorization: str = 'tucker',
     decompose_weights: bool = True,
     td_init: float = 0,
@@ -104,7 +110,8 @@ def decompose(
 ):
 
     model = torch.load(pretrained)
-    fact_model = copy.deepcopy(model)
+    n_param_orig = count_parameters(model)
+    # fact_model = copy.deepcopy(model)
     
     # which parameters to train
     # if freeze_parameters:
@@ -115,6 +122,8 @@ def decompose(
         td_init = False
 
     # layer_nrs = [2,6] if layer_nr == 0 else [layer_nr]
+    decomposition_kwargs = {'init': 'random'} if factorization == 'cp' else {}
+    fixed_rank_modes = 'spatial' if factorization == 'tucker' else None
 
     for i, (name, module) in enumerate(model.named_modules()):
         if i in layer_nrs:
@@ -123,7 +132,9 @@ def decompose(
                     module, 
                     rank=rank, 
                     decompose_weights=decompose_weights, 
-                    factorization=factorization
+                    factorization=factorization,
+                    fixed_rank_modes=fixed_rank_modes,
+                    decomposition_kwargs=decomposition_kwargs,
                 )
             elif type(module) == torch.nn.modules.linear.Linear:
                 fact_layer = tltorch.FactorizedLinear.from_linear(
@@ -132,11 +143,13 @@ def decompose(
                     out_tensorized_features=get_prime_factors(module.out_features), 
                     rank=rank,
                     factorization=factorization,
+                    decomposition_kwargs=decomposition_kwargs,
                 )
             if td_init:
                 fact_layer.weight.normal_(0, td_init)
-            fact_model._modules[name] = fact_layer
-    print(fact_model)
+            model._modules[name] = fact_layer
+    print(model)
+    n_param_fact = count_parameters(model)
 
     t = round(time())
     if seed is None:
@@ -154,7 +167,7 @@ def decompose(
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
 
     optimizer = optim.Adam(
-        filter(lambda p: p.requires_grad, fact_model.parameters()),
+        filter(lambda p: p.requires_grad, model.parameters()),
         lr=lr
     )
     scheduler = StepLR(optimizer, step_size=1, gamma=gamma) if gamma else None
@@ -170,13 +183,23 @@ def decompose(
     valid_acc = trainer.test()
     writer.add_scalar("Accuracy/before_finetuning/valid", valid_acc)
 
-    trainer.train(epochs=epochs)
+    results = trainer.train(epochs=epochs)
+    
+    results['model_name'] = MODEL_NAME
+    results['train_acc_before_ft'] = train_acc
+    results['valid_acc_before_ft'] = valid_acc
+    results['n_param_fact'] = n_param_fact
+    results['n_param_orig'] = n_param_orig
+    results['approx_error'] = None # TODO
+
+    with open(logdir.joinpath('results.json'), 'w') as f:
+        json.dump(results, f)
 
     writer.close()
 
 
 @app.command()
-def low_rank(
+def factorized(
     layer_nrs: List[int],
     factorization: str = 'tucker',
     td_init: float = 0.02,
@@ -186,26 +209,27 @@ def low_rank(
     logdir: str = "/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/mnist",
     batch: int = 256,
     gamma: float = 0.9,
-    conv1_out: int = 32,
-    conv2_out: int = 32,
+    conv1: int = 32,
+    conv2: int = 32,
     fc1_out: int = 128,
     seed: int = None,
 ):
     model = TdNet(
-        conv1_out=conv1_out, conv2_out=conv2_out, fc1_out=fc1_out, 
+        conv1_out=conv1, conv2_out=conv2, fc1_out=fc1_out, 
         layer_nrs=layer_nrs, rank=rank, factorization=factorization, td_init=td_init,
     ).cuda()
 
+    n_param_fact = count_parameters(model)
     print(model)
 
     t = round(time())
     if seed is None:
         seed = t
     set_seed(seed)
-    MODEL_NAME = f"lr-{conv1_out}-{conv2_out}-{layer_nrs}-{factorization}-{rank}-i{td_init}_bn_{batch}_adam_l{lr}_g{gamma}_s{seed == t}"
+    MODEL_NAME = f"lr-{conv1}-{conv2}-{layer_nrs}-{factorization}-{rank}-i{td_init}_bn_{batch}_adam_l{lr}_g{gamma}_s{seed == t}"
     logdir = Path(logdir).joinpath(MODEL_NAME,str(t))
     save = {
-        "save_every_epoch": 1,
+        "save_every_epoch": None,
         "save_location": str(logdir),
         "save_best": True,
         "save_final": True,
@@ -223,7 +247,13 @@ def low_rank(
     valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch)
 
     trainer = Trainer(train_loader, valid_loader, model, optimizer, writer, scheduler=scheduler, save=save)
-    trainer.train(epochs=epochs)
+    results = trainer.train(epochs=epochs)
+
+    results['model_name'] = MODEL_NAME
+    results['n_param_fact'] = n_param_fact
+
+    with open(logdir.joinpath('results.json'), 'w') as f:
+        json.dump(results, f)
 
     writer.close()
 

@@ -1,6 +1,7 @@
 from time import time
 from pathlib import Path
 from typing import List
+import json
 
 import torch
 import torch.optim as optim
@@ -15,6 +16,7 @@ from tddl.models.resnet import PA_ResNet18
 from tddl.models.resnet_lr import low_rank_resnet18
 from tddl.data.sets import DatasetFromSubset
 from tddl.utils.random import set_seed
+from tddl.models.utils import count_parameters
 
 import typer
 
@@ -48,7 +50,6 @@ valid_dataset = DatasetFromSubset(
 # test_dataset = datasets.FashionMNIST('/bigdata/f_mnist', train=False, transform=transform_test)
 
 
-
 @app.command()
 def train(
     batch: int = 256,
@@ -74,7 +75,7 @@ def train(
     MODEL_NAME = f"{model_name}_{depth}_d{dropout}_{batch}_sgd_l{lr}_g{gamma}_s{seed == t}"
     logdir = logdir.joinpath(MODEL_NAME,str(t))
     save = {
-        "save_every_epoch": 10,
+        "save_every_epoch": None,
         "save_location": str(logdir),
         "save_best": True,
         "save_final": True,
@@ -104,13 +105,19 @@ def train(
         ).cuda()
         milestones = [100, 150]
 
+    n_param = count_parameters(model)
     # optimizer = optim.Adam(model.parameters(), lr=lr)
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4)
     scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
     # scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
 
     trainer = Trainer(train_loader, valid_loader, model, optimizer, writer, scheduler=scheduler, save=save)
-    trainer.train(epochs=epochs)
+    results = trainer.train(epochs=epochs)
+
+    results['n_param'] = n_param
+    results['model_name'] = MODEL_NAME
+    with open(logdir.joinpath('results.json'), 'w') as f:
+        json.dump(results, f)
 
     writer.close()
 
@@ -131,6 +138,7 @@ def decompose(
     gamma: float = 0,
     model_name: str = "parn",
     seed: int = None,
+    data_workers: int = 1,
 ):
 
     if pretrained == "":
@@ -151,6 +159,8 @@ def decompose(
         init=td_init,
         pretrained_model=model,
     ).cuda()
+
+    n_param = count_parameters(fact_model)
     
     logdir = Path(logdir)
     if not logdir.is_dir():
@@ -183,8 +193,8 @@ def decompose(
     if pretrained == "":
         scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[100,150], gamma=gamma)
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch)
-    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
+    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch, num_workers=data_workers)
 
     trainer = Trainer(train_loader, valid_loader, fact_model, optimizer, writer, scheduler=scheduler, save=save)
     
@@ -194,7 +204,16 @@ def decompose(
         valid_acc = trainer.test()
         writer.add_scalar("Accuracy/before_finetuning/valid", valid_acc)
 
-    trainer.train(epochs=epochs)
+    results = trainer.train(epochs=epochs)
+    
+    results['model_name'] = MODEL_NAME
+    results['n_param_fact'] = n_param
+    if pretrained != "":
+        results['approx_error'] = None # TODO
+        results['train_acc_before_ft'] = train_acc
+        results['valid_acc_before_ft'] = valid_acc
+    with open(logdir.joinpath('results.json'), 'w') as f:
+        json.dump(results, f)
 
     writer.close()
 

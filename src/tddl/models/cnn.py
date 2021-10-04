@@ -59,6 +59,9 @@ class TdNet(Net):
         self.fc1 = nn.Linear(12*12*conv2_out, fc1_out)
         self.fc1_bn = nn.BatchNorm1d(fc1_out)
         self.fc2 = nn.Linear(fc1_out, 10)
+
+        decomposition_kwargs = {'init': 'random'} if factorization == 'cp' else {}
+        fixed_rank_modes = 'spatial' if factorization == 'tucker' else None
         
         # layer_nrs = [2,6] if layer_nr == 0 else [layer_nr]
         for i, (name, module) in enumerate(self.named_modules()):
@@ -68,18 +71,27 @@ class TdNet(Net):
                         module, 
                         rank=rank, 
                         decompose_weights=False, 
-                        factorization=factorization
+                        factorization=factorization,
+                        fixed_rank_modes=fixed_rank_modes,
+                        decomposition_kwargs=decomposition_kwargs,
                     )
                 elif type(module) == torch.nn.modules.linear.Linear:
+                    # fact_layer = tltorch.FactorizedLinear(
+                    #     in_tensorized_features=get_prime_factors(module.in_features), 
+                    #     out_tensorized_features=get_prime_factors(module.out_features), 
+                    #     rank=rank,
+                    #     factorization=factorization,
+                    #     device=module.weight.device, #  <-- this gives me errors
+                    # )
+                    
                     fact_layer = tltorch.FactorizedLinear.from_linear(
                         module, 
                         in_tensorized_features=get_prime_factors(module.in_features), 
                         out_tensorized_features=get_prime_factors(module.out_features), 
                         rank=rank,
                         factorization=factorization,
+                        decomposition_kwargs=decomposition_kwargs,
                     )
                 if td_init:
                     fact_layer.weight.normal_(0, td_init)
                 self._modules[name] = fact_layer
-
-    
