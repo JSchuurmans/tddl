@@ -39,9 +39,12 @@ def train(
     data_workers: int = 1,
     seed: int = None,
     data: Path = Path("/bigdata/f_mnist"),
+    cuda: str = None,
 ):
 
-    # logdir = Path(logdir)
+    if cuda is not None:
+        os.environ['CUDA_VISIBLE_DEVICES'] = cuda
+
     if not logdir.is_dir():
         raise FileNotFoundError("{0} folder does not exist!".format(logdir))
     t = round(time())
@@ -117,8 +120,12 @@ def decompose(
     model_name: str = "parn",
     seed: int = None,
     data_workers: int = 1,
-    data: Path = Path("/bigdata/f_mnist")
+    data: Path = Path("/bigdata/f_mnist"),
+    cuda: str = None,
 ):
+
+    if cuda is not None:
+        os.environ['CUDA_VISIBLE_DEVICES'] = cuda
 
     if pretrained == "":
         model = None
