@@ -1,20 +1,20 @@
+import json
+import os
 from time import time
 from pathlib import Path
 from typing import List
-import json
 
 import torch
 import torch.optim as optim
 from torch.optim import lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
+from torch.utils.data import DataLoader
+
+from tddl.data.loaders import get_f_mnist_loader
 from tddl.trainer import Trainer
-
-from torchvision import datasets, transforms
-
 from tddl.models.wrn import WideResNet
 from tddl.models.resnet import PA_ResNet18
 from tddl.models.resnet_lr import low_rank_resnet18
-from tddl.data.sets import DatasetFromSubset
 from tddl.utils.random import set_seed
 from tddl.models.utils import count_parameters
 
@@ -22,39 +22,14 @@ import typer
 
 app = typer.Typer()
 
-transform_train = transforms.Compose([
-    transforms.RandomCrop(28, padding=4),
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(),
-    transforms.Normalize((0.1307,), (0.3081,)),
-])
-
-transform_test = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.1307,), (0.3081,)),
-])
-
-dataset = datasets.FashionMNIST('/bigdata/f_mnist', train=True, download=True)
-train_dataset, valid_dataset = torch.utils.data.random_split(
-    dataset,
-    (50000, 10000),
-    generator=torch.Generator().manual_seed(42),
-)
-train_dataset = DatasetFromSubset(
-    train_dataset, transform=transform_train,
-)
-valid_dataset = DatasetFromSubset(
-    valid_dataset, transform=transform_test,
-)
-
-# test_dataset = datasets.FashionMNIST('/bigdata/f_mnist', train=False, transform=transform_test)
+os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
 
 
 @app.command()
 def train(
     batch: int = 256,
     epochs: int = 200,
-    logdir: str ="/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist",
+    logdir: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist"),
     lr: float = 0.1,
     gamma: float = 0.1,
     dropout: float = 0.5,
@@ -63,9 +38,10 @@ def train(
     width: int = 10,
     data_workers: int = 1,
     seed: int = None,
+    data: Path = Path("/bigdata/f_mnist"),
 ):
 
-    logdir = Path(logdir)
+    # logdir = Path(logdir)
     if not logdir.is_dir():
         raise FileNotFoundError("{0} folder does not exist!".format(logdir))
     t = round(time())
@@ -82,10 +58,12 @@ def train(
         "save_model_name": "cnn"
     }
 
+    train_dataset, valid_dataset, test_dataset = get_f_mnist_loader(data)
+
     # TODO add data augmentation
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
-    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch, num_workers=data_workers)
-    # test_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
+    train_loader = DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
+    valid_loader = DataLoader(valid_dataset, batch_size=batch, num_workers=data_workers)
+    # test_loader = DataLoader(train_dataset, batch_size=batch_size)
     
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
 
@@ -132,13 +110,14 @@ def decompose(
     rank: float = 0.5,
     epochs: int = 200,
     lr: float = 0.1,
-    logdir: str = "/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist",
+    logdir: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist"),
     # freeze_parameters: bool = False,
     batch: int = 256,
     gamma: float = 0,
     model_name: str = "parn",
     seed: int = None,
     data_workers: int = 1,
+    data: Path = Path("/bigdata/f_mnist")
 ):
 
     if pretrained == "":
@@ -162,7 +141,6 @@ def decompose(
 
     n_param = count_parameters(fact_model)
     
-    logdir = Path(logdir)
     if not logdir.is_dir():
         raise FileNotFoundError("{0} folder does not exist!".format(logdir))
     td = "td" if pretrained != "" else "lr"
@@ -193,8 +171,10 @@ def decompose(
     if pretrained == "":
         scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[100,150], gamma=gamma)
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
-    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch, num_workers=data_workers)
+    train_dataset, valid_dataset, test_dataset = get_f_mnist_loader(data)
+
+    train_loader = DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
+    valid_loader = DataLoader(valid_dataset, batch_size=batch, num_workers=data_workers)
 
     trainer = Trainer(train_loader, valid_loader, fact_model, optimizer, writer, scheduler=scheduler, save=save)
     
