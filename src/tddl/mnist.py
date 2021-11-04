@@ -1,5 +1,4 @@
 from time import time
-import copy
 from pathlib import Path
 from typing import List
 import json
@@ -24,14 +23,13 @@ import typer
 app = typer.Typer()
 
 transform=transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,))
-            ])
+    transforms.ToTensor(),
+    transforms.Normalize((0.1307,), (0.3081,))
+])
 
 dataset = datasets.MNIST('/bigdata/mnist', train=True, download=True, transform=transform)
 train_dataset, valid_dataset = torch.utils.data.random_split(dataset, (50000, 10000), generator=torch.Generator().manual_seed(42))
 test_dataset = datasets.MNIST('/bigdata/mnist', train=False, transform=transform)
-
 
 
 @app.command()
