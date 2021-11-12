@@ -1,4 +1,3 @@
-import copy
 import tltorch
 from tddl.models.resnet import PA_ResNet18
 from tddl.utils.prime_factors import get_prime_factors
@@ -7,7 +6,7 @@ def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='
     if pretrained_model is None:
         model = PA_ResNet18(**kwargs)
     else:
-        model = pretrained_model.cpu()
+        model = pretrained_model #.cuda() .cpu()
 
     decomposition_kwargs = {'init': 'random'} if factorization == 'cp' else {}
     fixed_rank_modes = 'spatial' if factorization == 'tucker' else None

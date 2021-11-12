@@ -18,12 +18,15 @@ from tddl.models.resnet_lr import low_rank_resnet18
 from tddl.utils.random import set_seed
 from tddl.models.utils import count_parameters
 
+import tensorly as tl
+
 import typer
 
 app = typer.Typer()
 
 os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
 
+tl.set_backend('pytorch')
 
 @app.command()
 def train(
@@ -36,6 +39,7 @@ def train(
     model_name: str = "parn",
     depth: int = 18,
     width: int = 10,
+    cpu: int = None,
     data_workers: int = 1,
     seed: int = None,
     data: Path = Path("/bigdata/f_mnist"),
@@ -44,6 +48,12 @@ def train(
 
     if cuda is not None:
         os.environ['CUDA_VISIBLE_DEVICES'] = cuda
+    
+    if cpu is not None:
+        os.environ["MKL_NUM_THREADS"] = cpu
+        os.environ["NUMEXPR_NUM_THREADS"] = cpu
+        os.environ["OMP_NUM_THREADS"] = cpu
+        data_workers = cpu # max(cpu-1, 1)
 
     if not logdir.is_dir():
         raise FileNotFoundError("{0} folder does not exist!".format(logdir))
@@ -122,10 +132,17 @@ def decompose(
     data_workers: int = 1,
     data: Path = Path("/bigdata/f_mnist"),
     cuda: str = None,
+    cpu: str = None,
 ):
 
     if cuda is not None:
         os.environ['CUDA_VISIBLE_DEVICES'] = cuda
+
+    if cpu is not None:
+        os.environ["MKL_NUM_THREADS"] = cpu
+        os.environ["NUMEXPR_NUM_THREADS"] = cpu
+        os.environ["OMP_NUM_THREADS"] = cpu
+        data_workers = int(cpu) # max(int(cpu)-1, 1)
 
     if pretrained == "":
         model = None

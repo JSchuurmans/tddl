@@ -14,18 +14,21 @@ from tddl.data.sets import DatasetFromSubset
 def get_train_loader(path, batch_size=32, num_workers=4, pin_memory=True):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     return data.DataLoader(
-        datasets.ImageFolder(path,
-                             transforms.Compose([
-                                 transforms.Resize(256),
-                                 transforms.RandomResizedCrop(224),
-                                 transforms.RandomHorizontalFlip(),
-                                 transforms.ToTensor(),
-                                 normalize,
-                             ])),
+        datasets.ImageFolder(
+            path,
+            transforms.Compose([
+                transforms.Resize(256),
+                transforms.RandomResizedCrop(224),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                normalize,
+            ])
+        ),
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
         pin_memory=pin_memory)
+
 
 def get_test_loader(path, batch_size=32, num_workers=4, pin_memory=True):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -41,6 +44,19 @@ def get_test_loader(path, batch_size=32, num_workers=4, pin_memory=True):
         shuffle=False,
         num_workers=num_workers,
         pin_memory=pin_memory)
+
+
+def get_mnist_loader(path):
+    transform=transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307,), (0.3081,))
+    ])
+
+    dataset = datasets.MNIST(path, train=True, download=True, transform=transform)
+    train_dataset, valid_dataset = torch.utils.data.random_split(dataset, (50000, 10000), generator=torch.Generator().manual_seed(42))
+    test_dataset = datasets.MNIST(path, train=False, download=True, transform=transform)
+    
+    return train_dataset, valid_dataset, test_dataset
 
 
 def get_f_mnist_loader(path):

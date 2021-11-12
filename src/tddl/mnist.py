@@ -1,7 +1,8 @@
+import json
+import os
 from time import time
 from pathlib import Path
 from typing import List
-import json
 
 import torch
 import torch.optim as optim
@@ -11,6 +12,7 @@ from torchvision import datasets, transforms
 
 import tltorch
 
+from tddl.data.loaders import get_mnist_loader
 from tddl.trainer import Trainer
 from tddl.models.cnn import Net, TdNet
 from tddl.utils.prime_factors import get_prime_factors
@@ -22,27 +24,29 @@ import typer
 
 app = typer.Typer()
 
-transform=transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.1307,), (0.3081,))
-])
+os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
 
-dataset = datasets.MNIST('/bigdata/mnist', train=True, download=True, transform=transform)
-train_dataset, valid_dataset = torch.utils.data.random_split(dataset, (50000, 10000), generator=torch.Generator().manual_seed(42))
-test_dataset = datasets.MNIST('/bigdata/mnist', train=False, transform=transform)
 
 
 @app.command()
 def train(
     batch: int = 256,
     epochs: int = 20,
-    logdir="/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/mnist",
+    logdir: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/mnist"),
     lr: float = 0.001,
     gamma: float = 0.9,
     conv1: int = 32,
     conv2: int = 64,
     seed: int = None,
+    data: Path = Path("/bigdata/mnist"),
+    cuda: str = None,
 ):
+
+    if cuda is not None:
+        os.environ['CUDA_VISIBLE_DEVICES'] = cuda
+
+    if not logdir.is_dir():
+        raise FileNotFoundError("{0} folder does not exist!".format(logdir))
 
     t = round(time())
     
@@ -60,6 +64,8 @@ def train(
         "save_model_name": "cnn"
     }
 
+    train_dataset, valid_dataset, test_dataset = get_mnist_loader(data)
+
     # TODO add data augmentation
     # Cutout/random crop (DeVries, 2017)
     # Mixup (Zhang, ICLR 2018)
@@ -71,7 +77,7 @@ def train(
     # lens distortions
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch)
     valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch)
-    # test_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
+    # test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size)
     
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
     model = Net(conv1_out=conv1, conv2_out=conv2).cuda()
