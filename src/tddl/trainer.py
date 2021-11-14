@@ -1,7 +1,9 @@
 import time
+import os
 import torch
 # from tddl.data.loaders import gettrain_loader, test_loader
 from torch.autograd import Variable
+from ray import tune
 from tqdm import tqdm, trange
 
 
@@ -34,12 +36,13 @@ class Trainer:
             self.save_final = save["save_final"]
             self.save_model_name = save["save_model_name"]
 
-    def test(self, loader=None):
+    def test(self, loader=None, loss=None):
         self.model.cuda()
         self.model.eval()
         correct = 0
-        total = 0
+        steps = 0
         total_time = 0
+        val_loss = 0.0
 
         if loader is None:
             loader = self.test_data_loader
@@ -50,17 +53,28 @@ class Trainer:
         for i, (batch, label) in enumerate(t):
             batch = batch.cuda()
             # t0 = time.time()
-            output = self.model(Variable(batch)).cpu()  # TODO
+            # input = Variable(batch)
+            output = self.model(Variable(batch)) #.cpu()  # commented cpu() out
+            loss = self.criterion(output, Variable(label))
+            val_loss += loss.cpu().numpy()
             # t1 = time.time()
             # total_time = total_time + (t1 - t0)
-            pred = output.data.max(1)[1]
-            correct += pred.cpu().eq(label).sum()
-            total += label.size(0)
+            pred = output.cpu().data.max(1)[1] # added .cpu()
+            correct += pred.cpu().eq(label).sum() # TODO check if output.cpu() and pred.cpu() is necessary
+            steps += label.size(0)
+
+            # if loss:
+            input = Variable(batch)
+            
 
         self.model.train()
-        accuracy = float(correct) / total
+        accuracy = float(correct) / steps
+        
+        if loss is not None:
+            return accuracy, val_loss / steps
+        else:
+            return accuracy
 
-        return accuracy
 
     def train(self, epochs=10):
         best_acc = 0
@@ -72,12 +86,14 @@ class Trainer:
             acc = self.test(loader=self.train_data_loader)
             self.writer.add_scalar("Accuracy/train", acc, i)
 
-            valid_acc = self.test(loader=self.test_data_loader)
+            valid_acc, valid_loss = self.test(loader=self.test_data_loader)
             self.writer.add_scalar("Accuracy/validation", valid_acc, i)
+            self.writer.add_scalar("Loss/validation", valid_loss, i)
             if valid_acc > best_acc and self.save_best:
                 self.results['best_epoch'] = i
                 self.results['best_train_acc'] = acc
                 self.results['best_valid_acc'] = valid_acc
+                self.results['best_valid_loss'] = valid_loss
                 torch.save(self.model, self.save_location + f"/{self.save_model_name}_best")
                 best_acc = valid_acc
 
@@ -85,6 +101,14 @@ class Trainer:
                 torch.save(self.model, self.save_location + f"/{self.save_model_name}_{i}")
 
             #TODO tabulate results
+            with tune.checkpoint_dir(i) as checkpoint_dir:
+                path = os.path.join(checkpoint_dir, "checkpoint")
+                torch.save(
+                    (self.model.state_dict(), self.optimizer.state_dict(), self.scheduler.state_dict()), 
+                    path,
+                )
+
+            tune.report(loss=valid_loss, accuracy=valid_loss)
 
         if self.save_final:
             torch.save(self.model, self.save_location + f"/{self.save_model_name}_final")
@@ -107,5 +131,3 @@ class Trainer:
             t.set_postfix(loss=loss)
             self.writer.add_scalar('Loss/train', loss, self.iteration)
             self.iteration += 1
-
-

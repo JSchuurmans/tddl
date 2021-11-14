@@ -7,6 +7,7 @@ base_requirements = [
     'tensorly-torch',
     'tqdm',
     'typer',
+    'ray[tune]',
 ]
 
 dev_requirements = [

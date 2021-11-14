@@ -3,12 +3,16 @@ import os
 from time import time
 from pathlib import Path
 from typing import List
+from functools import partial
 
 import torch
 import torch.optim as optim
 from torch.optim import lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
+from ray import tune
+from ray.tune import CLIReporter
+from ray.tune.schedulers import ASHAScheduler
 
 from tddl.data.loaders import get_f_mnist_loader
 from tddl.trainer import Trainer
@@ -44,7 +48,7 @@ def train(
     seed: int = None,
     data: Path = Path("/bigdata/f_mnist"),
     cuda: str = None,
-):
+) -> None:
 
     if cuda is not None:
         os.environ['CUDA_VISIBLE_DEVICES'] = cuda
@@ -133,7 +137,9 @@ def decompose(
     data: Path = Path("/bigdata/f_mnist"),
     cuda: str = None,
     cpu: str = None,
-):
+    checkpoint_dir: str = None,
+    tuning_config: None,
+) -> None:
 
     if cuda is not None:
         os.environ['CUDA_VISIBLE_DEVICES'] = cuda
@@ -154,7 +160,7 @@ def decompose(
     if decompose_weights:
         td_init = False
 
-    fact_model = low_rank_resnet18(
+    model = low_rank_resnet18(
         layers=layers,
         rank=rank,
         decompose_weights=decompose_weights,
@@ -163,7 +169,9 @@ def decompose(
         pretrained_model=model,
     ).cuda()
 
-    n_param = count_parameters(fact_model)
+
+
+    n_param = count_parameters(model)
     
     if not logdir.is_dir():
         raise FileNotFoundError("{0} folder does not exist!".format(logdir))
@@ -189,18 +197,26 @@ def decompose(
     #     lr=lr
     # )
     optimizer = optim.SGD(
-        fact_model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4
+        model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4
     )
     scheduler = lr_scheduler.StepLR(optimizer, step_size=1, gamma=gamma) if gamma else None
     if pretrained == "":
         scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[100,150], gamma=gamma)
+
+    if checkpoint_dir:
+        model_state, optimizer_state, scheduler_state = torch.load(
+            os.path.join(checkpoint_dir, "checkpoint")
+        )
+        model.load_state_dict(model_state)
+        optimizer.load_state_dict(optimizer_state)
+        scheduler.load_state_dict(scheduler_state)
 
     train_dataset, valid_dataset, test_dataset = get_f_mnist_loader(data)
 
     train_loader = DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
     valid_loader = DataLoader(valid_dataset, batch_size=batch, num_workers=data_workers)
 
-    trainer = Trainer(train_loader, valid_loader, fact_model, optimizer, writer, scheduler=scheduler, save=save)
+    trainer = Trainer(train_loader, valid_loader, model, optimizer, writer, scheduler=scheduler, save=save)
     
     if pretrained != "":
         train_acc = trainer.test(loader="train")
@@ -221,6 +237,64 @@ def decompose(
 
     writer.close()
 
+
+@app.command()
+def tune(
+    lr_min: float = 1e-5,
+    lr_max: float = 1e0,
+    runtype: str ='decompose',
+    num_samples: int = 10,
+    max_epochs: int = 10,
+    gpus_per_trial: int = 1,
+    cpus_per_trial: int = 4,
+    **kwargs,
+) -> None:
+    """
+    input:
+        lr: list of [min, max] learning rate
+        runtype: string in ['train', 'decompose']
+    """
+    
+    data_dir = ...
+    config = {
+        "lr": tune.loguniform(lr_min, lr_max),
+    }
+
+    scheduler = ASHAScheduler(
+        metric="loss",
+        mode="min",
+        max_t=max_epochs,
+        grace_period=1,     #TODO: what does grace_period mean?
+        reduction_factor=2  #TODO: what does reduction_factor do?
+    )
+
+    reporter = CLIReporter(
+        # parameter_columns=["l1", "l2", "lr", "batch_size"],
+        metric_columns=["loss", "accuracy", "training_iteration"])
+    
+    if runtype == 'decompose':
+        train_func = decompose
+    elif runtype == 'train':
+        train_func = train
+    else:
+        raise NotImplementedError
+
+    result = tune.run(
+        partial(train_func, data_dir=data_dir, **kwargs),
+        resources_per_trial={"cpu": cpus_per_trial, "gpu": gpus_per_trial},
+        config=config,
+        num_samples=num_samples,
+        scheduler=scheduler,
+        progress_reporter=reporter)
+
+    best_trial = result.get_best_trial("loss", "min", "last")
+    print("Best trial config: {}".format(best_trial.config))
+    print("Best trial final validation loss: {}".format(
+        best_trial.last_result["loss"]))
+    print("Best trial final validation accuracy: {}".format(
+        best_trial.last_result["accuracy"]))
+
+    
 
 if __name__ == "__main__":
     app()
