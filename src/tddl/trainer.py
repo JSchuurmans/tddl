@@ -1,10 +1,9 @@
-import time
 import os
+import numpy as np
+from tqdm import tqdm, trange
 import torch
-# from tddl.data.loaders import gettrain_loader, test_loader
 from torch.autograd import Variable
 from ray import tune
-from tqdm import tqdm, trange
 
 
 class Trainer:
@@ -65,9 +64,6 @@ class Trainer:
                 correct += pred.cpu().eq(label).sum() # TODO check if output.cpu() and pred.cpu() is necessary
                 steps += label.size(0)
 
-            # if loss:
-            input = Variable(batch)
-
         self.model.train()
         accuracy = float(correct) / steps
         
@@ -105,7 +101,10 @@ class Trainer:
                     (self.model.state_dict(), self.optimizer.state_dict(), self.scheduler.state_dict()), 
                     path,
                 )
-
+            
+            if np.isnan(valid_loss):
+                valid_loss = 1e6
+            
             tune.report(loss=valid_loss, accuracy=valid_acc)
 
         if self.save_final:
