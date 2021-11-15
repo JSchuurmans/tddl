@@ -46,7 +46,7 @@ def train(
     cpu: int = None,
     data_workers: int = 1,
     seed: int = None,
-    data: Path = Path("/bigdata/f_mnist"),
+    data_dir: Path = Path("/bigdata/f_mnist"),
     cuda: str = None,
 ) -> None:
 
@@ -75,7 +75,7 @@ def train(
         "save_model_name": "cnn"
     }
 
-    train_dataset, valid_dataset, test_dataset = get_f_mnist_loader(data)
+    train_dataset, valid_dataset, test_dataset = get_f_mnist_loader(data_dir)
 
     # TODO add data augmentation
     train_loader = DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
@@ -134,11 +134,11 @@ def decompose(
     model_name: str = "parn",
     seed: int = None,
     data_workers: int = 1,
-    data: Path = Path("/bigdata/f_mnist"),
+    data_dir: Path = Path("/bigdata/f_mnist"),
     cuda: str = None,
     cpu: str = None,
     checkpoint_dir: str = None,
-    tuning_config: None,
+    config: str = None,
 ) -> None:
 
     if cuda is not None:
@@ -160,6 +160,9 @@ def decompose(
     if decompose_weights:
         td_init = False
 
+    if config is not None:
+        lr = config['lr']
+
     model = low_rank_resnet18(
         layers=layers,
         rank=rank,
@@ -168,8 +171,6 @@ def decompose(
         init=td_init,
         pretrained_model=model,
     ).cuda()
-
-
 
     n_param = count_parameters(model)
     
@@ -211,7 +212,7 @@ def decompose(
         optimizer.load_state_dict(optimizer_state)
         scheduler.load_state_dict(scheduler_state)
 
-    train_dataset, valid_dataset, test_dataset = get_f_mnist_loader(data)
+    train_dataset, valid_dataset, test_dataset = get_f_mnist_loader(data_dir)
 
     train_loader = DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
     valid_loader = DataLoader(valid_dataset, batch_size=batch, num_workers=data_workers)
@@ -219,10 +220,13 @@ def decompose(
     trainer = Trainer(train_loader, valid_loader, model, optimizer, writer, scheduler=scheduler, save=save)
     
     if pretrained != "":
-        train_acc = trainer.test(loader="train")
+        train_acc, train_loss = trainer.test(loader="train")
         writer.add_scalar("Accuracy/before_finetuning/train", train_acc)
-        valid_acc = trainer.test()
+        writer.add_scalar("Loss/before_finetuning/train", train_loss)
+        valid_acc, valid_loss = trainer.test()
         writer.add_scalar("Accuracy/before_finetuning/valid", valid_acc)
+        writer.add_scalar("Loss/before_finetuning/valid", valid_loss)
+
 
     results = trainer.train(epochs=epochs)
     
@@ -238,8 +242,14 @@ def decompose(
     writer.close()
 
 
+def tune_decompose(config, checkpoint_dir, data_dir, *args, **kwargs):
+    # print({**kwargs})
+    decompose(*args, config=config, checkpoint_dir=checkpoint_dir, data_dir=data_dir, **kwargs)
+
+
 @app.command()
-def tune(
+def hype(
+    layers: List[int],
     lr_min: float = 1e-5,
     lr_max: float = 1e0,
     runtype: str ='decompose',
@@ -247,15 +257,33 @@ def tune(
     max_epochs: int = 10,
     gpus_per_trial: int = 1,
     cpus_per_trial: int = 4,
-    **kwargs,
+    # layers: List[int] = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
+    pretrained: str = "/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist/parn_18_d0.5_256_sgd_l0.1_g0.1/1629473591/cnn_best",
+    factorization: str = 'tucker',
+    # decompose_weights: bool = True,
+    td_init: float = 0.02,
+    rank: float = 0.5,
+    epochs: int = 200,
+    logdir: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist"),
+    # freeze_parameters: bool = False,
+    batch: int = 256,
+    gamma: float = 0,
+    model_name: str = "parn",
+    seed: int = None,
+    data_workers: int = 1,
+    data_dir: Path = Path("/bigdata/f_mnist"),
+    cuda: str = None,
+    cpu: str = None,
+    checkpoint_dir: str = None,
 ) -> None:
     """
+    hyperparameter tuning
+
     input:
         lr: list of [min, max] learning rate
         runtype: string in ['train', 'decompose']
     """
     
-    data_dir = ...
     config = {
         "lr": tune.loguniform(lr_min, lr_max),
     }
@@ -273,19 +301,39 @@ def tune(
         metric_columns=["loss", "accuracy", "training_iteration"])
     
     if runtype == 'decompose':
-        train_func = decompose
+        train_func = tune_decompose
     elif runtype == 'train':
         train_func = train
     else:
         raise NotImplementedError
 
     result = tune.run(
-        partial(train_func, data_dir=data_dir, **kwargs),
+        partial(train_func, 
+            layers=layers,
+            pretrained=pretrained,
+            factorization=factorization,
+            # decompose_weights: bool = True,
+            td_init=td_init,
+            rank=rank,
+            epochs=epochs,
+            logdir=logdir,
+            # freeze_parameters: bool = False,
+            batch=batch,
+            gamma=gamma,
+            model_name=model_name,
+            seed=seed,
+            data_workers=data_workers,
+            data_dir=data_dir,
+            cuda=cuda,
+            cpu=cpu,
+            checkpoint_dir= logdir / "check_dir",
+        ),
         resources_per_trial={"cpu": cpus_per_trial, "gpu": gpus_per_trial},
         config=config,
         num_samples=num_samples,
         scheduler=scheduler,
-        progress_reporter=reporter)
+        progress_reporter=reporter,
+    )
 
     best_trial = result.get_best_trial("loss", "min", "last")
     print("Best trial config: {}".format(best_trial.config))
@@ -294,7 +342,6 @@ def tune(
     print("Best trial final validation accuracy: {}".format(
         best_trial.last_result["accuracy"]))
 
-    
 
 if __name__ == "__main__":
     app()

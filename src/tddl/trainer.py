@@ -36,7 +36,8 @@ class Trainer:
             self.save_final = save["save_final"]
             self.save_model_name = save["save_model_name"]
 
-    def test(self, loader=None, loss=None):
+
+    def test(self, loader=None):
         self.model.cuda()
         self.model.eval()
         correct = 0
@@ -51,29 +52,26 @@ class Trainer:
 
         t = tqdm(loader, total=int(len(loader)))
         for i, (batch, label) in enumerate(t):
-            batch = batch.cuda()
-            # t0 = time.time()
-            # input = Variable(batch)
-            output = self.model(Variable(batch)) #.cpu()  # commented cpu() out
-            loss = self.criterion(output, Variable(label))
-            val_loss += loss.cpu().numpy()
-            # t1 = time.time()
-            # total_time = total_time + (t1 - t0)
-            pred = output.cpu().data.max(1)[1] # added .cpu()
-            correct += pred.cpu().eq(label).sum() # TODO check if output.cpu() and pred.cpu() is necessary
-            steps += label.size(0)
+            with torch.no_grad():
+                batch = batch.cuda() # TODO: change to .to_device(device)
+                # t0 = time.time()
+                # input = Variable(batch)
+                output = self.model(Variable(batch)) #.cpu()  # commented cpu() out
+                loss = self.criterion(output, Variable(label, requires_grad=False).cuda())
+                val_loss += loss.cpu().numpy()
+                # t1 = time.time()
+                # total_time = total_time + (t1 - t0)
+                pred = output.cpu().data.max(1)[1] # added .cpu()
+                correct += pred.cpu().eq(label).sum() # TODO check if output.cpu() and pred.cpu() is necessary
+                steps += label.size(0)
 
             # if loss:
             input = Variable(batch)
-            
 
         self.model.train()
         accuracy = float(correct) / steps
         
-        if loss is not None:
-            return accuracy, val_loss / steps
-        else:
-            return accuracy
+        return accuracy, val_loss / steps
 
 
     def train(self, epochs=10):
@@ -83,7 +81,7 @@ class Trainer:
             if self.scheduler is not None:
                 self.scheduler.step()
 
-            acc = self.test(loader=self.train_data_loader)
+            acc, _ = self.test(loader=self.train_data_loader)
             self.writer.add_scalar("Accuracy/train", acc, i)
 
             valid_acc, valid_loss = self.test(loader=self.test_data_loader)
@@ -94,11 +92,11 @@ class Trainer:
                 self.results['best_train_acc'] = acc
                 self.results['best_valid_acc'] = valid_acc
                 self.results['best_valid_loss'] = valid_loss
-                torch.save(self.model, self.save_location + f"/{self.save_model_name}_best")
+                torch.save(self.model, self.save_location + f"/{self.save_model_name}_best.pth")
                 best_acc = valid_acc
 
             if self.save_every_epoch is not None and (i+1) % self.save_every_epoch == 0:
-                torch.save(self.model, self.save_location + f"/{self.save_model_name}_{i}")
+                torch.save(self.model, self.save_location + f"/{self.save_model_name}_{i}.pth")
 
             #TODO tabulate results
             with tune.checkpoint_dir(i) as checkpoint_dir:
@@ -108,10 +106,10 @@ class Trainer:
                     path,
                 )
 
-            tune.report(loss=valid_loss, accuracy=valid_loss)
+            tune.report(loss=valid_loss, accuracy=valid_acc)
 
         if self.save_final:
-            torch.save(self.model, self.save_location + f"/{self.save_model_name}_final")
+            torch.save(self.model, self.save_location + f"/{self.save_model_name}_final.pth")
         
         return self.results
 
