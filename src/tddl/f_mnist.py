@@ -242,6 +242,7 @@ def decompose(
     writer.close()
 
 
+# Config needs to be first positional argument of trainable_function for RayTune
 def tune_decompose(config, checkpoint_dir, data_dir, *args, **kwargs):
     # print({**kwargs})
     decompose(*args, config=config, checkpoint_dir=checkpoint_dir, data_dir=data_dir, **kwargs)
@@ -333,6 +334,9 @@ def hype(
         num_samples=num_samples,
         scheduler=scheduler,
         progress_reporter=reporter,
+        local_dir=logdir / "raytune",
+        # name="MEHBLAH", # default: DEFAULT_2021-11-16_13-47-23
+        # trial_name_creator=trial_name_string # trial_name_string is function
     )
 
     best_trial = result.get_best_trial("loss", "min", "last")
@@ -342,6 +346,14 @@ def hype(
     print("Best trial final validation accuracy: {}".format(
         best_trial.last_result["accuracy"]))
 
+    # # Restored previous trial from the given checkpoint
+    # tune.run(
+    #     "PG",
+    #     name="RestoredExp", # The name can be different.
+    #     stop={"training_iteration": 10}, # train 5 more iterations than previous
+    #     restore="~/ray_results/Original/PG_<xxx>/checkpoint_5/checkpoint-5",
+    #     config={"env": "CartPole-v0"},
+    # )
 
 if __name__ == "__main__":
     app()
