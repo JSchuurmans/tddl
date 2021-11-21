@@ -5,6 +5,9 @@ from pathlib import Path
 from typing import List
 from functools import partial
 
+import numpy as np
+# from ray.tune.suggest import ConcurrencyLimiter
+# from ray.tune.suggest.bayesopt import BayesOptSearch
 import torch
 import torch.optim as optim
 from torch.optim import lr_scheduler
@@ -28,9 +31,24 @@ import typer
 
 app = typer.Typer()
 
-os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
 
 tl.set_backend('pytorch')
+
+
+def select_hardware(
+    cuda: str = None,
+    cpu: str = None,
+) -> None:
+    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+
+    if cuda is not None:
+        os.environ['CUDA_VISIBLE_DEVICES'] = cuda
+
+    if cpu is not None:
+        os.environ["MKL_NUM_THREADS"] = cpu
+        os.environ["NUMEXPR_NUM_THREADS"] = cpu
+        os.environ["OMP_NUM_THREADS"] = cpu
+
 
 @app.command()
 def train(
@@ -50,15 +68,10 @@ def train(
     cuda: str = None,
 ) -> None:
 
-    if cuda is not None:
-        os.environ['CUDA_VISIBLE_DEVICES'] = cuda
-    
+    select_hardware(cuda, cpu)
     if cpu is not None:
-        os.environ["MKL_NUM_THREADS"] = cpu
-        os.environ["NUMEXPR_NUM_THREADS"] = cpu
-        os.environ["OMP_NUM_THREADS"] = cpu
-        data_workers = cpu # max(cpu-1, 1)
-
+        data_workers = int(cpu) # max(int(cpu)-1, 1)
+    
     if not logdir.is_dir():
         raise FileNotFoundError("{0} folder does not exist!".format(logdir))
     t = round(time())
@@ -133,7 +146,7 @@ def decompose(
     gamma: float = 0,
     model_name: str = "parn",
     seed: int = None,
-    data_workers: int = 1,
+    data_workers: int = 2,
     data_dir: Path = Path("/bigdata/f_mnist"),
     cuda: str = None,
     cpu: str = None,
@@ -141,15 +154,10 @@ def decompose(
     config: str = None,
 ) -> None:
 
-    if cuda is not None:
-        os.environ['CUDA_VISIBLE_DEVICES'] = cuda
-
+    select_hardware(cuda, cpu)
     if cpu is not None:
-        os.environ["MKL_NUM_THREADS"] = cpu
-        os.environ["NUMEXPR_NUM_THREADS"] = cpu
-        os.environ["OMP_NUM_THREADS"] = cpu
         data_workers = int(cpu) # max(int(cpu)-1, 1)
-
+    
     if pretrained == "":
         model = None
         decompose_weights = False
@@ -162,6 +170,8 @@ def decompose(
 
     if config is not None:
         lr = config['lr']
+        factorization = config['fact']
+        rank = config['rank']
 
     model = low_rank_resnet18(
         layers=layers,
@@ -245,6 +255,8 @@ def decompose(
 # Config needs to be first positional argument of trainable_function for RayTune
 def tune_decompose(config, checkpoint_dir, data_dir, *args, **kwargs):
     # print({**kwargs})
+    # if config['fact']:
+    #     factorization=config['fact']
     decompose(*args, config=config, checkpoint_dir=checkpoint_dir, data_dir=data_dir, **kwargs)
 
 
@@ -263,7 +275,7 @@ def hype(
     factorization: str = 'tucker',
     # decompose_weights: bool = True,
     td_init: float = 0.02,
-    rank: float = 0.5,
+    rank = 0.5,
     epochs: int = 200,
     logdir: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist"),
     # freeze_parameters: bool = False,
@@ -276,6 +288,9 @@ def hype(
     cuda: str = None,
     cpu: str = None,
     checkpoint_dir: str = None,
+    search_type: str = 'grid',
+    metric: str = 'loss',
+    mode: str = 'min',
 ) -> None:
     """
     hyperparameter tuning
@@ -283,22 +298,43 @@ def hype(
     input:
         lr: list of [min, max] learning rate
         runtype: string in ['train', 'decompose']
+        search_type: string in ['grid', 'loguniform'] # TODO not implemented yet, will be difficult when more hyperparameters are tuned.
+        metric: string in ['loss', 'accuracy']
+        mode: string in ['min', 'max']
+        rank: float (frational rank) or str (0.25, 0.5, 0.75)
+        factorization: all ('tucker', 'cp', 'tt')
     """
     
+    select_hardware(cuda, cpu)
+    if cpu is not None:
+        data_workers = int(cpu) # max(int(cpu)-1, 1)
+
+    # lr = np.arange(lr_min, lr_max, 1)
+
+    lr = [0.1**x for x in [0,1,2,3,4,5]]
+    # np.power(0.1, np.array([0,1,2,3,4,5]), dtype=float)
+
+    
+    rank_list = [0.25, 0.5, 0.75] if rank == "all" else [float(rank)]
+    fact_list = ['tucker', 'cp', 'tt'] if factorization == "all" else [factorization]
+    
     config = {
-        "lr": tune.loguniform(lr_min, lr_max),
+        # "lr": tune.loguniform(lr_min, lr_max),
+        "lr": tune.grid_search(lr), # array([1.e+00, 1.e-01, 1.e-02, 1.e-03, 1.e-04, 1.e-05])
+        "rank": tune.grid_search(rank_list),
+        "fact": tune.grid_search(fact_list),
     }
 
     scheduler = ASHAScheduler(
-        metric="loss",
-        mode="min",
+        metric=metric, # "loss"
+        mode=mode, # "min"
         max_t=max_epochs,
-        grace_period=1,     #TODO: what does grace_period mean?
-        reduction_factor=2  #TODO: what does reduction_factor do?
+        grace_period=1,     #TODO: Only stop trials at least this old in time. Unclear what definition of time unit is
+        reduction_factor= 2,  #TODO: what does reduction_factor do? Halving, check ASHA paper
     )
 
     reporter = CLIReporter(
-        # parameter_columns=["l1", "l2", "lr", "batch_size"],
+        parameter_columns=["lr", "fact", "rank"],
         metric_columns=["loss", "accuracy", "training_iteration"])
     
     if runtype == 'decompose':
@@ -308,14 +344,25 @@ def hype(
     else:
         raise NotImplementedError
 
+    checkpoint_dir = checkpoint_dir if checkpoint_dir else logdir / "check_dir"
+
+    # algo = BayesOptSearch(
+    #     metric=metric,
+    #     mode=mode,
+    #     utility_kwargs={"kind": "ucb", "kappa": 2.5, "xi": 0.0},
+    #     random_search_steps=30,
+    # )
+    
+    # algo = ConcurrencyLimiter(algo, max_concurrent=10)
+
     result = tune.run(
         partial(train_func, 
             layers=layers,
             pretrained=pretrained,
-            factorization=factorization,
+            # factorization=config['fact'],
             # decompose_weights: bool = True,
             td_init=td_init,
-            rank=rank,
+            # rank=rank,
             epochs=epochs,
             logdir=logdir,
             # freeze_parameters: bool = False,
@@ -325,13 +372,14 @@ def hype(
             seed=seed,
             data_workers=data_workers,
             data_dir=data_dir,
-            cuda=cuda,
-            cpu=cpu,
-            checkpoint_dir= logdir / "check_dir",
+            # cuda=cuda,
+            # cpu=cpu,
+            checkpoint_dir= checkpoint_dir,
         ),
         resources_per_trial={"cpu": cpus_per_trial, "gpu": gpus_per_trial},
         config=config,
         num_samples=num_samples,
+        # search_alg=algo,
         scheduler=scheduler,
         progress_reporter=reporter,
         local_dir=logdir / "raytune",
@@ -339,7 +387,7 @@ def hype(
         # trial_name_creator=trial_name_string # trial_name_string is function
     )
 
-    best_trial = result.get_best_trial("loss", "min", "last")
+    best_trial = result.get_best_trial(metric, mode, "last")
     print("Best trial config: {}".format(best_trial.config))
     print("Best trial final validation loss: {}".format(
         best_trial.last_result["loss"]))
