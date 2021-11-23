@@ -12,6 +12,7 @@ def calculate_error(
     with torch.no_grad():
         return torch.norm(original-approximation, **kwargs)
 
+
 def calculate_scaled_error(
     original, 
     approximation,
@@ -23,7 +24,6 @@ def calculate_scaled_error(
     """
     with torch.no_grad():
         return torch.norm(original-approximation, **kwargs) / torch.numel(original)
-
 
 
 def calculate_relative_error(
