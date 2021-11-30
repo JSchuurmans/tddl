@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List
 from functools import partial
 
+import yaml
 import numpy as np
 # from ray.tune.suggest import ConcurrencyLimiter
 # from ray.tune.suggest.bayesopt import BayesOptSearch
@@ -25,6 +26,7 @@ from tddl.models.resnet_lr import low_rank_resnet18
 from tddl.utils.random import set_seed
 from tddl.utils.hardware import select_hardware
 from tddl.models.utils import count_parameters
+from tddl.utils.checks import check_path, check_paths
 
 import tensorly as tl
 
@@ -54,6 +56,8 @@ def train(
     cuda: str = None,
 ) -> None:
 
+    logdir, data_dir = check_paths(logdir, data_dir)
+
     select_hardware(cuda, cpu)
     if cpu is not None:
         data_workers = int(cpu) # max(int(cpu)-1, 1)
@@ -65,7 +69,7 @@ def train(
         seed = t
     set_seed(seed)
     MODEL_NAME = f"{model_name}_{depth}_d{dropout}_{batch}_sgd_l{lr}_g{gamma}_s{seed == t}"
-    logdir = logdir.joinpath(MODEL_NAME,str(t))
+    logdir = logdir.joinpath(str(t), MODEL_NAME)
     save = {
         "save_every_epoch": None,
         "save_location": str(logdir),
@@ -140,6 +144,8 @@ def decompose(
     config: str = None,
 ) -> None:
 
+    logdir, data_dir = check_paths(logdir, data_dir)
+
     select_hardware(cuda, cpu)
     if cpu is not None:
         data_workers = int(cpu) # max(int(cpu)-1, 1)
@@ -173,12 +179,15 @@ def decompose(
     if not logdir.is_dir():
         raise FileNotFoundError("{0} folder does not exist!".format(logdir))
     td = "td" if pretrained != "" else "lr"
-    t = round(time())
+    
     if seed is None:
-        seed = t
+        t = round(time())
+    else:
+        t = seed
     set_seed(seed)
+
     MODEL_NAME = f"{model_name}-{td}-{layers}-{factorization}-{rank}-d{str(decompose_weights)}-i{td_init}_bn_{batch}_sgd_l{lr}_g{gamma}_s{seed == t}"
-    logdir = logdir.joinpath(MODEL_NAME, str(t))
+    logdir = logdir.joinpath(str(t), MODEL_NAME)
     save = {
         "save_every_epoch": None,
         "save_location": str(logdir),
@@ -291,6 +300,8 @@ def hype(
         factorization: all ('tucker', 'cp', 'tt')
     """
     
+    logdir, data_dir = check_paths(logdir, data_dir)
+
     select_hardware(cuda, cpu)
     if cpu is not None:
         data_workers = int(cpu) # max(int(cpu)-1, 1)
@@ -388,6 +399,53 @@ def hype(
     #     restore="~/ray_results/Original/PG_<xxx>/checkpoint_5/checkpoint-5",
     #     config={"env": "CartPole-v0"},
     # )
+
+
+@app.command(
+    context_settings=dict(
+        ignore_unknown_options=True,
+        allow_extra_args=True,
+    )
+)
+def main(
+    ctx: typer.Context,
+    config_path: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl"),
+) -> None:
+    
+    config_data = {}
+    # load yaml / alternative https://stackoverflow.com/questions/1773805/how-can-i-parse-a-yaml-file-in-python
+    config_data = yaml.load(config_path.read_text(), Loader=yaml.Loader)
+    
+    # typer.echo(f"Config file: {config_data}")
+    for item in ctx.args:
+        config_data.update([item.strip("--").split('=')])
+    # typer.echo(f"Config, modified with inputs: {config_data}")
+    
+    seed = config_data.get("seed")
+    if seed is None:
+        t = round(time())
+    else:
+        t = seed
+    config_data.update({"seed":t})
+
+    # write yaml to logdir folder
+    config_log = Path(config_data['logdir']) / str(t) / 'config.yml'
+    os.makedirs(os.path.dirname(config_log), exist_ok=True)
+    with open(config_log, 'w', encoding='utf8') as outfile:
+        yaml.dump(config_data, outfile, default_flow_style=False, allow_unicode=True)
+
+    # config_data_log = yaml.load(Path("/home/jetzeschuurman/gitProjects/phd/tddl/tmp/1637934961/config.yml").read_text(), Loader=yaml.Loader)
+    
+    if config_data.get('tune'):
+        hype(**config_data)
+
+        #TODO continue from hyperparameter tuning and train best model.
+
+    elif config_data.get('factorization') is None:
+        train(**config_data) # TODO check if function can be called with typer, such that path_string is interpreted as Path instance not str
+    else:
+        decompose(**config_data)
+
 
 if __name__ == "__main__":
     app()

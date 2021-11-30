@@ -8,6 +8,7 @@ base_requirements = [
     'tqdm',
     'typer',
     'ray[tune]',
+    'pyyaml',
 ]
 
 dev_requirements = [
