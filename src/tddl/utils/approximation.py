@@ -10,7 +10,10 @@ def calculate_error(
         The norm of the difference with tracking gradients.
     """
     with torch.no_grad():
-        return torch.norm(original-approximation, **kwargs)
+        return torch.norm(
+            original-approximation.to(device=original.device), 
+            **kwargs
+        )
 
 
 def calculate_scaled_error(
@@ -23,11 +26,13 @@ def calculate_scaled_error(
         The error and scales with the number of elements in the original tensor.
     """
     with torch.no_grad():
-        return torch.norm(original-approximation, **kwargs) / torch.numel(original)
+        return torch.norm(
+            original-approximation.to(device=original.device), 
+            **kwargs) / torch.numel(original)
 
 
 def calculate_relative_error(
-    original, 
+    original,
     approximation,
     **kwargs,
 ):
@@ -36,4 +41,5 @@ def calculate_relative_error(
         The error relative to the norm of the original tensor.
     """
     with torch.no_grad():
-        return torch.norm(original-approximation, **kwargs) / torch.norm(original, **kwargs)
+        return torch.norm(original-approximation.to(device=original.device), 
+        **kwargs) / torch.norm(original, **kwargs)

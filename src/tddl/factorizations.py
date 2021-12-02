@@ -1,7 +1,7 @@
 import torch
 import tltorch
 from tddl.utils.prime_factors import get_prime_factors
-from tddl.utils.approximation import calculate_error
+from tddl.utils.approximation import calculate_relative_error
 
 def factorize_layer(
     module,
@@ -12,6 +12,7 @@ def factorize_layer(
     # decomposition_kwargs={},
     init_std=None,
     return_error=False,
+    **kwargs,
 ):
     
     decomposition_kwargs = {'init': 'random'} if factorization == 'cp' else {}
@@ -25,6 +26,7 @@ def factorize_layer(
             factorization=factorization,
             fixed_rank_modes=fixed_rank_modes,
             decomposition_kwargs=decomposition_kwargs,
+            **kwargs,
         )
     elif type(module) == torch.nn.modules.linear.Linear:
         fact_module = tltorch.FactorizedLinear.from_linear(
@@ -36,6 +38,7 @@ def factorize_layer(
             decompose_weights=decompose_weights,
             fixed_rank_modes=fixed_rank_modes,
             decomposition_kwargs=decomposition_kwargs,
+            **kwargs,
         )
     else:
         raise NotImplementedError(type(module))
@@ -44,7 +47,7 @@ def factorize_layer(
         fact_module.weight.normal_(0, init_std)
 
     if return_error:
-        error = calculate_error(fact_module.weight.to_tensor(), module.weight)
+        error = calculate_relative_error(fact_module.weight.to_tensor(), module.weight)
     else:
         error = None
 
@@ -129,18 +132,24 @@ def number_layers(model, verbose=False, **kwargs):
     return nested_children(model, **kwargs)
 
 
-def outer(output, layers):
-    list_errors = []
+def list_errors(output, layers):
+    errors = []
 
     def parse_errors(d, layers):
         
-        nonlocal list_errors
+        nonlocal errors
         for k, v in d.items():
             if isinstance(v[2], dict):
                 parse_errors(v[2], layers)
             elif v[0] in layers:
-                list_errors.append(v)
+                errors.append(
+                    (
+                        v[0], # layer_nr
+                        float(v[1].detach().cpu()), # approx.error wrt pretrained
+                        str(v[2]), # layer
+                    )
+                )
 
     parse_errors(output, layers)
     
-    return list_errors
+    return errors

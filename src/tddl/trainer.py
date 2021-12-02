@@ -7,7 +7,10 @@ from ray import tune
 
 
 class Trainer:
-    def __init__(self, train_loader, test_loader, model, optimizer, writer, scheduler=None, save=None, results={}, **kwargs):
+    def __init__(
+        self, train_loader, test_loader, model, optimizer, writer, 
+        scheduler=None, save=None, results={}, tuning=False,**kwargs
+    ):
         self.train_data_loader = train_loader
         self.test_data_loader = test_loader
 
@@ -21,6 +24,8 @@ class Trainer:
         self.iteration = 0
         self.writer = writer
         self.results = results
+
+        self.tuning = tuning
 
         if save is None:
             self.save_every_epoch = None
@@ -94,18 +99,19 @@ class Trainer:
             if self.save_every_epoch is not None and (i+1) % self.save_every_epoch == 0:
                 torch.save(self.model, self.save_location + f"/{self.save_model_name}_{i}.pth")
 
-            #TODO tabulate results
-            with tune.checkpoint_dir(i) as checkpoint_dir:
-                path = os.path.join(checkpoint_dir, "checkpoint")
-                torch.save(
-                    (self.model.state_dict(), self.optimizer.state_dict(), self.scheduler.state_dict()), 
-                    path,
-                )
-            
             if np.isnan(valid_loss):
                 valid_loss = 1e6
             
-            tune.report(loss=valid_loss, accuracy=valid_acc)
+            #TODO tabulate results
+            if self.tuning:
+                with tune.checkpoint_dir(i) as checkpoint_dir:
+                    path = os.path.join(checkpoint_dir, "checkpoint")
+                    torch.save(
+                        (self.model.state_dict(), self.optimizer.state_dict(), self.scheduler.state_dict()), 
+                        path,
+                    )
+            
+                tune.report(loss=valid_loss, accuracy=valid_acc)
 
         if self.save_final:
             torch.save(self.model, self.save_location + f"/{self.save_model_name}_final.pth")

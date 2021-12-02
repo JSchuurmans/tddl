@@ -26,7 +26,9 @@ from tddl.models.resnet_lr import low_rank_resnet18
 from tddl.utils.random import set_seed
 from tddl.utils.hardware import select_hardware
 from tddl.models.utils import count_parameters
-from tddl.utils.checks import check_path, check_paths
+from tddl.utils.checks import check_paths
+from tddl.factorizations import factorize_network
+from tddl.factorizations import list_errors
 
 import tensorly as tl
 
@@ -104,6 +106,9 @@ def train(
         milestones = [100, 150]
 
     n_param = count_parameters(model)
+    with open(logdir.joinpath('n_param.json'), 'w') as f:
+        json.dump(n_param, f)
+
     # optimizer = optim.Adam(model.parameters(), lr=lr)
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4)
     scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
@@ -123,10 +128,10 @@ def train(
 @app.command()
 def decompose(
     layers: List[int],
-    pretrained: str = "/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist/parn_18_d0.5_256_sgd_l0.1_g0.1/1629473591/cnn_best",
+    baseline_path: str = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist/parn_18_d0.5_256_sgd_l0.1_g0.1/1629473591/cnn_best"),
     factorization: str = 'tucker',
-    # decompose_weights: bool = True,
-    td_init: float = 0.02,
+    decompose_weights: bool = True,
+    td_init: float = None, # 0.02
     rank: float = 0.5,
     epochs: int = 200,
     lr: float = 0.1,
@@ -141,44 +146,35 @@ def decompose(
     cuda: str = None,
     cpu: str = None,
     checkpoint_dir: str = None,
-    config: str = None,
+    config: str = None, #raytune config
 ) -> None:
 
-    logdir, data_dir = check_paths(logdir, data_dir)
+    logdir, data_dir, baseline_path = check_paths(
+        logdir, data_dir, baseline_path
+    )
 
     select_hardware(cuda, cpu)
     if cpu is not None:
         data_workers = int(cpu) # max(int(cpu)-1, 1)
     
-    if pretrained == "":
-        model = None
-        decompose_weights = False
-    else:
-        model = torch.load(pretrained)
-        decompose_weights = True
+    if not decompose_weights:
+        if td_init is None:
+            print(10*"!", "td_init not set", 10*"!") # TODO logging, not printing
+            td_init=0.02
+            print(10*"!", f"set td_init to: {td_init}", 10*"!")
 
-    if decompose_weights:
-        td_init = False
-
+    tuning = False
     if config is not None:
         lr = config['lr']
         factorization = config['fact']
         rank = config['rank']
+        gamma = config['gamma']
+        decompose_weights = config['td']
+        tuning = True
 
-    model = low_rank_resnet18(
-        layers=layers,
-        rank=rank,
-        decompose_weights=decompose_weights,
-        factorization=factorization,
-        init=td_init,
-        pretrained_model=model,
-    ).cuda()
-
-    n_param = count_parameters(model)
-    
     if not logdir.is_dir():
         raise FileNotFoundError("{0} folder does not exist!".format(logdir))
-    td = "td" if pretrained != "" else "lr"
+    td = "td" if not decompose_weights else "lr"
     
     if seed is None:
         t = round(time())
@@ -197,6 +193,29 @@ def decompose(
     }
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
 
+    model = torch.load(baseline_path)
+    output = factorize_network(
+        model,
+        layers=layers,
+        factorization=factorization,
+        rank=rank,
+        decompose_weights=decompose_weights,
+        init_std=td_init,
+        return_error=True,
+    )
+    # TODO layers are in here, they are not serializable
+    # with open(logdir.joinpath('factorization.json'), 'w') as f:
+    #     json.dump(output, f)
+    # print(output)
+
+    errors = list_errors(output, layers)
+    with open(logdir.joinpath('erros.json'), 'w') as f:
+        json.dump(errors, f)
+
+    n_param = count_parameters(model) # TODO: is gradients check really necessary? Does this mess up tt? 
+    with open(logdir.joinpath('n_param.json'), 'w') as f:
+        json.dump(n_param, f)
+
     # TODO change back to Adam
     # optimizer = optim.Adam(
     #     filter(lambda p: p.requires_grad, fact_model.parameters()),
@@ -205,8 +224,9 @@ def decompose(
     optimizer = optim.SGD(
         model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4
     )
+    # TODO check schedulers
     scheduler = lr_scheduler.StepLR(optimizer, step_size=1, gamma=gamma) if gamma else None
-    if pretrained == "":
+    if not decompose_weights:
         scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[100,150], gamma=gamma)
 
     if checkpoint_dir:
@@ -222,9 +242,13 @@ def decompose(
     train_loader = DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
     valid_loader = DataLoader(valid_dataset, batch_size=batch, num_workers=data_workers)
 
-    trainer = Trainer(train_loader, valid_loader, model, optimizer, writer, scheduler=scheduler, save=save)
+    # TODO Session not detected. You should not be calling this function outside `tune.run` or while using the class API.
+    trainer = Trainer(
+        train_loader, valid_loader, 
+        model, optimizer, writer, 
+        scheduler=scheduler, save=save, tuning=tuning)
     
-    if pretrained != "":
+    if not decompose_weights:
         train_acc, train_loss = trainer.test(loader="train")
         writer.add_scalar("Accuracy/before_finetuning/train", train_acc)
         writer.add_scalar("Loss/before_finetuning/train", train_loss)
@@ -232,13 +256,11 @@ def decompose(
         writer.add_scalar("Accuracy/before_finetuning/valid", valid_acc)
         writer.add_scalar("Loss/before_finetuning/valid", valid_loss)
 
-
     results = trainer.train(epochs=epochs)
     
     results['model_name'] = MODEL_NAME
     results['n_param_fact'] = n_param
-    if pretrained != "":
-        results['approx_error'] = None # TODO
+    if not decompose_weights:
         results['train_acc_before_ft'] = train_acc
         results['valid_acc_before_ft'] = valid_acc
     with open(logdir.joinpath('results.json'), 'w') as f:
@@ -258,17 +280,15 @@ def tune_decompose(config, checkpoint_dir, data_dir, *args, **kwargs):
 @app.command()
 def hype(
     layers: List[int],
-    lr_min: float = 1e-5,
-    lr_max: float = 1e0,
+    lr: float = 1.e-1,
     runtype: str ='decompose',
     num_samples: int = 10,
     max_epochs: int = 10,
     gpus_per_trial: int = 1,
     cpus_per_trial: int = 4,
-    # layers: List[int] = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
-    pretrained: str = "/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist/parn_18_d0.5_256_sgd_l0.1_g0.1/1629473591/cnn_best",
+    baseline_path: str = "/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist/parn_18_d0.5_256_sgd_l0.1_g0.1/1629473591/cnn_best",
     factorization: str = 'tucker',
-    # decompose_weights: bool = True,
+    decompose_weights: bool = True,
     td_init: float = 0.02,
     rank = 0.5,
     epochs: int = 200,
@@ -286,6 +306,8 @@ def hype(
     search_type: str = 'grid',
     metric: str = 'loss',
     mode: str = 'min',
+    grace_period: int = 1,
+    **kwargs
 ) -> None:
     """
     hyperparameter tuning
@@ -308,31 +330,41 @@ def hype(
 
     # lr = np.arange(lr_min, lr_max, 1)
 
-    lr = [0.1**x for x in [0,1,2,3,4,5]]
+    lrs = lr if type(lr) == list else [lr]
+    # lr = [0.1**x for x in [1,2,3,4,5]] # 0 did not work
     # np.power(0.1, np.array([0,1,2,3,4,5]), dtype=float)
-
+    gammas = gamma if type(gamma) == list else [gamma]
+    ranks = rank if type(rank) == list else [rank]
+    # rank_list = [0.25, 0.5, 0.75] if rank == "all" else [float(rank)]
+    facts = factorization if type(factorization) == list else [factorization]
     
-    rank_list = [0.25, 0.5, 0.75] if rank == "all" else [float(rank)]
-    fact_list = ['tucker', 'cp', 'tt'] if factorization == "all" else [factorization]
+    # TODO this is hacky, check if typer can be used to call functions
+    if type(decompose_weights) == str:
+        decompose_weights = bool(int(decompose_weights))
+    # tds: should you initialize with td (1) or randomly (0)
+    tds = decompose_weights if type(decompose_weights) == list else [bool(decompose_weights)]
     
     config = {
         # "lr": tune.loguniform(lr_min, lr_max),
-        "lr": tune.grid_search(lr), # array([1.e+00, 1.e-01, 1.e-02, 1.e-03, 1.e-04, 1.e-05])
-        "rank": tune.grid_search(rank_list),
-        "fact": tune.grid_search(fact_list),
+        "lr": tune.grid_search(lrs), # array([1.e+00, 1.e-01, 1.e-02, 1.e-03, 1.e-04, 1.e-05])
+        "gamma": tune.grid_search(gammas),
+        "rank": tune.grid_search(ranks),
+        "fact": tune.grid_search(facts),
+        "td": tune.grid_search(tds),
     }
 
     scheduler = ASHAScheduler(
         metric=metric, # "loss"
         mode=mode, # "min"
         max_t=max_epochs,
-        grace_period=1,     #TODO: Only stop trials at least this old in time. Unclear what definition of time unit is
+        grace_period=grace_period,     #TODO: Only stop trials at least this old in time. Unclear what definition of time unit is
         reduction_factor= 2,  #TODO: what does reduction_factor do? Halving, check ASHA paper
     )
 
     reporter = CLIReporter(
-        parameter_columns=["lr", "fact", "rank"],
-        metric_columns=["loss", "accuracy", "training_iteration"])
+        # parameter_columns=["lr", "gamma", "fact", "rank"],
+        metric_columns=["loss", "accuracy", "training_iteration"],
+    )
     
     if runtype == 'decompose':
         train_func = tune_decompose
@@ -355,16 +387,16 @@ def hype(
     result = tune.run(
         partial(train_func, 
             layers=layers,
-            pretrained=pretrained,
+            baseline_path=baseline_path,
             # factorization=config['fact'],
-            # decompose_weights: bool = True,
+            decompose_weights=decompose_weights,
             td_init=td_init,
             # rank=rank,
             epochs=epochs,
             logdir=logdir,
             # freeze_parameters: bool = False,
             batch=batch,
-            gamma=gamma,
+            # gamma=gamma,
             model_name=model_name,
             seed=seed,
             data_workers=data_workers,
