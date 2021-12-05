@@ -147,6 +147,8 @@ def decompose(
     cpu: str = None,
     checkpoint_dir: str = None,
     config: str = None, #raytune config
+    return_error: bool = True,
+    **kwargs,
 ) -> None:
 
     logdir, data_dir, baseline_path = check_paths(
@@ -201,16 +203,18 @@ def decompose(
         rank=rank,
         decompose_weights=decompose_weights,
         init_std=td_init,
-        return_error=True,
+        return_error=return_error,
     )
-    # TODO layers are in here, they are not serializable
+
+    # TODO modules are in here, they are not serializable
     # with open(logdir.joinpath('factorization.json'), 'w') as f:
     #     json.dump(output, f)
     # print(output)
 
-    errors = list_errors(output, layers)
-    with open(logdir.joinpath('erros.json'), 'w') as f:
-        json.dump(errors, f)
+    if output is not None:
+        errors = list_errors(output, layers)
+        with open(logdir.joinpath('erros.json'), 'w') as f:
+            json.dump(errors, f)
 
     n_param = count_parameters(model) # TODO: is gradients check really necessary? Does this mess up tt? 
     with open(logdir.joinpath('n_param.json'), 'w') as f:
@@ -404,6 +408,7 @@ def hype(
             # cuda=cuda,
             # cpu=cpu,
             checkpoint_dir= checkpoint_dir,
+            **kwargs,
         ),
         resources_per_trial={"cpu": cpus_per_trial, "gpu": gpus_per_trial},
         config=config,

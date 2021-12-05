@@ -47,7 +47,10 @@ def factorize_layer(
         fact_module.weight.normal_(0, init_std)
 
     if return_error:
-        error = calculate_relative_error(fact_module.weight.to_tensor(), module.weight)
+        error = calculate_relative_error(
+            original=module.weight,
+            approximation=fact_module.weight.to_tensor(),
+        )
     else:
         error = None
 
@@ -57,7 +60,7 @@ def factorize_layer(
 def factorize_network(
     model, layers=[], exclude=[], verbose=False, 
     return_error=False, 
-    **kwargs
+    **kwargs,
 ):
     """
     Usage: factorize_network(model, layers=[6])
@@ -97,8 +100,8 @@ def factorize_network(
                     #     layer = 
                     m._modules[name], error = factorize_layer(child, return_error=return_error, **kwargs)
                 try:
-                    if verbose and return_error:
-                        print((i, error))
+                    # if verbose and return_error:
+                    #     print((i, error))
                     output[name] = (i, error, nested_children(child, **kwargs) )
                 except TypeError:
                     output[name] = (i, error, nested_children(child, **kwargs) )
@@ -107,6 +110,7 @@ def factorize_network(
 
     if return_error:
         return out
+
 
 def number_layers(model, verbose=False, **kwargs):
     i = -1
