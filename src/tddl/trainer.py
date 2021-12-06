@@ -1,4 +1,6 @@
 import os
+from time import time
+
 import numpy as np
 from tqdm import tqdm, trange
 import torch
@@ -78,7 +80,9 @@ class Trainer:
     def train(self, epochs=10):
         best_acc = 0
         for i in trange(epochs):
-            self.train_epoch()
+            delta_t = self.train_epoch()
+            self.writer.add_scalar("Time/train/epoch_in_sec", delta_t, i)
+
             if self.scheduler is not None:
                 self.scheduler.step()
 
@@ -121,16 +125,24 @@ class Trainer:
     def train_batch(self, batch, label):
         self.model.zero_grad()
         input = Variable(batch)
+        start_batch = time()
         loss = self.criterion(self.model(input), Variable(label))
+        delta_batch = time() - start_batch
         loss.backward()
         self.optimizer.step()
+
+        self.writer.add_scalar("Time/train/batch_in_sec", delta_batch, self.iteration)
 
         return loss.item()
 
     def train_epoch(self):
         t = tqdm(self.train_data_loader, total=int(len(self.test_data_loader)))
+        start_epoch = time()
         for i, (batch, label) in enumerate(t):
             loss = self.train_batch(batch.cuda(), label.cuda())
             t.set_postfix(loss=loss)
             self.writer.add_scalar('Loss/train', loss, self.iteration)
             self.iteration += 1
+        delta_epoch = time() - start_epoch
+
+        return delta_epoch
