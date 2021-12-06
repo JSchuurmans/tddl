@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List
 from functools import partial
 
+import git
 import yaml
 import numpy as np
 # from ray.tune.suggest import ConcurrencyLimiter
@@ -205,6 +206,7 @@ def decompose(
         init_std=td_init,
         return_error=return_error,
     )
+    torch.save(model, logdir / "model_after_fact.pth")
 
     # TODO modules are in here, they are not serializable
     # with open(logdir.joinpath('factorization.json'), 'w') as f:
@@ -464,6 +466,10 @@ def main(
     else:
         t = seed
     config_data.update({"seed":t})
+
+    repo = git.Repo(search_parent_directories=True)
+    sha = repo.head.object.hexsha
+    config_data.update({"hexsha":sha})
 
     # write yaml to logdir folder
     config_log = Path(config_data['logdir']) / str(t) / 'config.yml'
