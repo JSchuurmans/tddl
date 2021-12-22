@@ -3,8 +3,8 @@ from setuptools import setup, find_packages
 base_requirements = [
     # 'torch',
     # 'torchvision',
-    'tensorly',
-    'tensorly-torch',
+    'tensorly==0.5.1',
+    'tensorly-torch==0.2.0',
     'tqdm',
     'typer',
     'ray[tune]',
@@ -15,6 +15,7 @@ dev_requirements = [
     'tensorboard',
     'jupyterlab',
     'pandas',
+    'gitpython'
     # 'kaggle',
     # 'pytest',
     # 'pytest-flake8',

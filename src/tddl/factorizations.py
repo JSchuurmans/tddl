@@ -46,15 +46,15 @@ def factorize_layer(
     if init_std:
         fact_module.weight.normal_(0, init_std)
 
-    if return_error:
-        error = calculate_relative_error(
-            original=module.weight,
-            approximation=fact_module.weight.to_tensor(),
-        )
-    else:
-        error = None
+    # if return_error:
+    #     error = calculate_relative_error(
+    #         original=module.weight,
+    #         approximation=fact_module.weight.to_tensor(),
+    #     )
+    # else:
+    #     error = None
 
-    return fact_module, error
+    return fact_module
 
 
 def factorize_network(
@@ -98,13 +98,13 @@ def factorize_network(
                     #         print(error)
                     # else:
                     #     layer = 
-                    m._modules[name], error = factorize_layer(child, return_error=return_error, **kwargs)
+                    m._modules[name] = factorize_layer(child, return_error=return_error, **kwargs)
                 try:
                     # if verbose and return_error:
                     #     print((i, error))
-                    output[name] = (i, error, nested_children(child, **kwargs) )
+                    output[name] = (i, nested_children(child, **kwargs) )
                 except TypeError:
-                    output[name] = (i, error, nested_children(child, **kwargs) )
+                    output[name] = (i, nested_children(child, **kwargs) )
         return output #, errors
     out = nested_children(model, **kwargs)
 
@@ -112,14 +112,14 @@ def factorize_network(
         return out
 
 
-def number_layers(model, verbose=False, **kwargs):
+def number_layers(model, verbose=False, end_nodes=[], **kwargs):
     i = -1
     def nested_children(m: torch.nn.Module, exclude=[]):
         nonlocal i
         children = dict(m.named_children())
         output = {}
         i+=1
-        if children == {}:
+        if children == {} or m._get_name()=='FactorizedConv':
             return m
         else:
             for name, child in children.items():
@@ -157,3 +157,25 @@ def list_errors(output, layers):
     parse_errors(output, layers)
     
     return errors
+
+
+def listify_numbered_layers(numbered_layers, layer_names=[], layer_nrs=[]):
+    output = []
+
+    def parse_errors(d):
+        
+        nonlocal output
+        for k, v in d.items():
+            # print(v)
+            if isinstance(v[1], dict):
+                parse_errors(v[1])
+            elif k in layer_names or v[0] in layer_nrs:
+                output.append((
+                        k, # layer_name
+                        v[0], # layer_nr
+                        v[1], # layer
+                    ))
+    
+    parse_errors(numbered_layers)
+    
+    return output
