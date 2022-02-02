@@ -148,7 +148,7 @@ def decompose(
     cpu: str = None,
     checkpoint_dir: str = None,
     config: str = None, #raytune config
-    return_error: bool = True,
+    return_error: bool = False,
     **kwargs,
 ) -> None:
 
