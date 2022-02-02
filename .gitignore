@@ -1,6 +1,7 @@
 # artifacts
 artifacts/
 runs/
+plots/
 
 # IDEs
 .idea
