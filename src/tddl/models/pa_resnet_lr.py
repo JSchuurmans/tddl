@@ -1,5 +1,5 @@
 import tltorch
-from tddl.models.resnet import PA_ResNet18
+from tddl.models.pa_resnet import PA_ResNet18
 from tddl.utils.prime_factors import get_prime_factors
 
 def low_rank_resnet18(layers, rank=0.5, decompose_weights=False, factorization='tucker', init=None, pretrained_model=None, **kwargs):

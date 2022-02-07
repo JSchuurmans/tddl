@@ -18,12 +18,14 @@ from torch.utils.data import DataLoader
 from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
+from torchvision.models import resnet18 
 
 from tddl.data.loaders import get_f_mnist_loader
+from tddl.models.resnet_torch import get_resnet_from_torch
 from tddl.trainer import Trainer
 from tddl.models.wrn import WideResNet
-from tddl.models.resnet import PA_ResNet18
-from tddl.models.resnet_lr import low_rank_resnet18
+from tddl.models.pa_resnet import PA_ResNet18
+from tddl.models.pa_resnet_lr import low_rank_resnet18
 from tddl.utils.random import set_seed
 from tddl.utils.hardware import select_hardware
 from tddl.models.utils import count_parameters
@@ -48,7 +50,7 @@ def train(
     logdir: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist"),
     lr: float = 0.1,
     gamma: float = 0.1,
-    dropout: float = 0.5,
+    dropout: float = None,
     model_name: str = "parn",
     depth: int = 18,
     width: int = 10,
@@ -57,6 +59,10 @@ def train(
     seed: int = None,
     data_dir: Path = Path("/bigdata/f_mnist"),
     cuda: str = None,
+    milestones: List[int] = None,
+    optimizer: str = None,
+    weight_decay: float = 1e-4,
+    **kwargs
 ) -> None:
 
     logdir, data_dir = check_paths(logdir, data_dir)
@@ -72,7 +78,7 @@ def train(
         seed = t
     set_seed(seed)
     MODEL_NAME = f"{model_name}_{depth}_d{dropout}_{batch}_sgd_l{lr}_g{gamma}_s{seed == t}"
-    logdir = logdir.joinpath(str(t), MODEL_NAME)
+    logdir = logdir.joinpath(str(t), model_name, MODEL_NAME)
     save = {
         "save_every_epoch": None,
         "save_location": str(logdir),
@@ -98,20 +104,32 @@ def train(
             widen_factor=width,
             dropRate=dropout,
         ).cuda()
-        milestones = [100, 150, 225]
+        default_milestones = [100, 150, 225]
     elif model_name == "parn":
         model = PA_ResNet18(
             num_classes=num_classes, 
             nc=1,
         ).cuda()
-        milestones = [100, 150]
+        default_milestones = [100, 150]
+    elif model_name == "rn18":
+        model = get_resnet_from_torch(
+            in_channels=1,
+            num_classes=num_classes,
+        ).cuda()
+        default_milestones = [100, 150]
+    
+    if milestones is None:
+        milestones = default_milestones
 
     n_param = count_parameters(model)
     with open(logdir.joinpath('n_param.json'), 'w') as f:
         json.dump(n_param, f)
 
-    # optimizer = optim.Adam(model.parameters(), lr=lr)
-    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4)
+    if optimizer == "adam":
+        optimizer = optim.Adam(model.parameters(), lr=lr)
+    elif optimizer == "sgd":
+        optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=weight_decay)
+
     scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
     # scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
 

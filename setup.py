@@ -9,6 +9,8 @@ base_requirements = [
     'typer',
     'ray[tune]',
     'pyyaml',
+    'GitPython',
+    'PyYAML',
 ]
 
 dev_requirements = [
