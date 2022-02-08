@@ -167,6 +167,8 @@ def decompose(
     checkpoint_dir: str = None,
     config: str = None, #raytune config
     return_error: bool = False,
+    weight_decay: float = 0,
+    optimizer: str = 'adam',
     **kwargs,
 ) -> None:
 
@@ -240,18 +242,15 @@ def decompose(
     with open(logdir.joinpath('n_param.json'), 'w') as f:
         json.dump(n_param, f)
 
-    # TODO change back to Adam
-    # optimizer = optim.Adam(
-    #     filter(lambda p: p.requires_grad, fact_model.parameters()),
-    #     lr=lr
-    # )
-    optimizer = optim.SGD(
-        model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4
-    )
+    if optimizer == "adam":
+        optimizer = optim.Adam(model.parameters(), lr=lr)
+    elif optimizer == "sgd":
+        optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=weight_decay)
     # TODO check schedulers
-    scheduler = lr_scheduler.StepLR(optimizer, step_size=1, gamma=gamma) if gamma else None
-    if not decompose_weights:
-        scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[100,150], gamma=gamma)
+    # scheduler = lr_scheduler.StepLR(optimizer, step_size=1, gamma=gamma) if gamma else None
+    # if not decompose_weights:
+    #     scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[100,150], gamma=gamma)
+    scheduler = None
 
     if checkpoint_dir:
         model_state, optimizer_state, scheduler_state = torch.load(
@@ -272,21 +271,29 @@ def decompose(
         model, optimizer, writer, 
         scheduler=scheduler, save=save, tuning=tuning)
     
-    if not decompose_weights:
+    if decompose_weights:
         train_acc, train_loss = trainer.test(loader="train")
         writer.add_scalar("Accuracy/before_finetuning/train", train_acc)
         writer.add_scalar("Loss/before_finetuning/train", train_loss)
         valid_acc, valid_loss = trainer.test()
         writer.add_scalar("Accuracy/before_finetuning/valid", valid_acc)
         writer.add_scalar("Loss/before_finetuning/valid", valid_loss)
+        results_before_training = {
+            "train_acc": train_acc,
+            "train_loss": train_loss,
+            "valid_acc": valid_acc,
+            "valid_loss": valid_loss,
+        }
+        with open(logdir.joinpath('results_before_training.json'), 'w') as f:
+            json.dump(results_before_training, f)
 
     results = trainer.train(epochs=epochs)
     
     results['model_name'] = MODEL_NAME
     results['n_param_fact'] = n_param
-    if not decompose_weights:
-        results['train_acc_before_ft'] = train_acc
-        results['valid_acc_before_ft'] = valid_acc
+    # if decompose_weights:
+    #     results['train_acc_before_ft'] = train_acc
+    #     results['valid_acc_before_ft'] = valid_acc
     with open(logdir.joinpath('results.json'), 'w') as f:
         json.dump(results, f)
 
