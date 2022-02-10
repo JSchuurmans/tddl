@@ -1,0 +1,24 @@
+# model
+model_name: rn18
+baseline_path: /bigdata/f_mnist/logs/1644265976/rn18/rn18_18_dNone_256_sgd_l0.001_g0.1_sTrue/cnn_best.pth
+
+# training
+batch: 256
+epochs: 25
+optimizer: 'adam'
+lr: 1.0e-5
+gamma: 0
+
+# factorization
+factorization: 'tucker'
+decompose_weights: true
+rank: 0.5
+layers:
+- 28
+
+# datalogging
+data_dir: "/bigdata/f_mnist" 
+logdir: "/bigdata/f_mnist/logs" 
+
+# hardware
+data_workers: 16

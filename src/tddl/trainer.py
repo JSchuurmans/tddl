@@ -10,11 +10,11 @@ from ray import tune
 
 class Trainer:
     def __init__(
-        self, train_loader, test_loader, model, optimizer, writer, 
+        self, train_loader, valid_loader, model, optimizer, writer, 
         scheduler=None, save=None, results={}, tuning=False,**kwargs
     ):
         self.train_data_loader = train_loader
-        self.test_data_loader = test_loader
+        self.valid_loader = valid_loader
 
         self.optimizer = optimizer
         self.scheduler = scheduler if scheduler is not None else None
@@ -52,8 +52,8 @@ class Trainer:
         val_loss = 0.0
 
         if loader is None:
-            loader = self.test_data_loader
-        if loader == "train":
+            loader = self.valid_loader
+        elif loader == "train":
             loader = self.train_data_loader
 
         t = tqdm(loader, total=int(len(loader)))
@@ -89,7 +89,7 @@ class Trainer:
             acc, _ = self.test(loader=self.train_data_loader)
             self.writer.add_scalar("Accuracy/train", acc, i)
 
-            valid_acc, valid_loss = self.test(loader=self.test_data_loader)
+            valid_acc, valid_loss = self.test(loader=self.valid_loader)
             self.writer.add_scalar("Accuracy/validation", valid_acc, i)
             self.writer.add_scalar("Loss/validation", valid_loss, i)
             if valid_acc > best_acc and self.save_best:
@@ -136,7 +136,7 @@ class Trainer:
         return loss.item()
 
     def train_epoch(self):
-        t = tqdm(self.train_data_loader, total=int(len(self.test_data_loader)))
+        t = tqdm(self.train_data_loader, total=int(len(self.valid_loader)))
         start_epoch = time()
         for i, (batch, label) in enumerate(t):
             loss = self.train_batch(batch.cuda(), label.cuda())

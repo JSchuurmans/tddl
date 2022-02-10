@@ -17,3 +17,14 @@ Train ResNet-18 like FMix paper with batchsize 128 for 300 epochs with SGD and m
 ```
 python src/tddl/f_mnist.py main --config-path configs/tud/f_mnist/train_re.yml --weight-decay 1.0e-4
 ```
+
+## 7 Feb
+
+Use for loop in bash to run multiple config files:
+```
+for LAYER in 15 19 28 38 41 44 60 63; 
+do for FACT in cp tucker; 
+do python src/tddl/f_mnist.py main --config-path configs/tud/f_mnist/decompose/dec-$FACT-r0.5-$LAYER.yml;
+done;
+done
+```

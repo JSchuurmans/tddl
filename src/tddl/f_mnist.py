@@ -32,6 +32,7 @@ from tddl.models.utils import count_parameters
 from tddl.utils.checks import check_paths
 from tddl.factorizations import factorize_network
 from tddl.factorizations import list_errors
+from tddl.utils.typecast import typecast
 
 import tensorly as tl
 
@@ -44,6 +45,7 @@ tl.set_backend('pytorch')
 
 
 @app.command()
+@typecast
 def train(
     batch: int = 256,
     epochs: int = 200,
@@ -78,7 +80,7 @@ def train(
         seed = t
     set_seed(seed)
     MODEL_NAME = f"{model_name}_{depth}_d{dropout}_{batch}_sgd_l{lr}_g{gamma}_s{seed == t}"
-    logdir = logdir.joinpath(str(t), model_name, MODEL_NAME)
+    logdir = logdir.joinpath(str(t), MODEL_NAME)
     save = {
         "save_every_epoch": None,
         "save_location": str(logdir),
@@ -92,7 +94,7 @@ def train(
     # TODO add data augmentation
     train_loader = DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
     valid_loader = DataLoader(valid_dataset, batch_size=batch, num_workers=data_workers)
-    # test_loader = DataLoader(train_dataset, batch_size=batch_size)
+    test_loader = DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
     
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
 
@@ -136,6 +138,16 @@ def train(
     trainer = Trainer(train_loader, valid_loader, model, optimizer, writer, scheduler=scheduler, save=save)
     results = trainer.train(epochs=epochs)
 
+    # this uses final model, need to use best model
+    # test_acc, test_loss = trainer.test(loader=test_loader)
+    # load best model
+    trainer.model = torch.load(Path(trainer.save_location) / f"{trainer.save_model_name}_best.pth")
+    # test best model
+    test_acc, test_loss = trainer.test(loader=test_loader)
+    # register test results
+    results['test_acc'] = test_acc
+    results['test_loss'] = test_loss
+
     results['n_param'] = n_param
     results['model_name'] = MODEL_NAME
     with open(logdir.joinpath('results.json'), 'w') as f:
@@ -144,10 +156,12 @@ def train(
     writer.close()
 
 
+
 @app.command()
+@typecast
 def decompose(
     layers: List[int],
-    baseline_path: str = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist/parn_18_d0.5_256_sgd_l0.1_g0.1/1629473591/cnn_best"),
+    baseline_path: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist/parn_18_d0.5_256_sgd_l0.1_g0.1/1629473591/cnn_best"),
     factorization: str = 'tucker',
     decompose_weights: bool = True,
     td_init: float = None, # 0.02
@@ -264,6 +278,8 @@ def decompose(
 
     train_loader = DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
     valid_loader = DataLoader(valid_dataset, batch_size=batch, num_workers=data_workers)
+    test_loader = DataLoader(test_dataset, batch_size=batch, num_workers=data_workers)
+
 
     # TODO Session not detected. You should not be calling this function outside `tune.run` or while using the class API.
     trainer = Trainer(
@@ -289,6 +305,14 @@ def decompose(
 
     results = trainer.train(epochs=epochs)
     
+    # load best model
+    trainer.model = torch.load(Path(trainer.save_location) / f"{trainer.save_model_name}_best.pth")
+    # test best model
+    test_acc, test_loss = trainer.test(loader=test_loader)
+    # register test results
+    results['test_acc'] = test_acc
+    results['test_loss'] = test_loss
+
     results['model_name'] = MODEL_NAME
     results['n_param_fact'] = n_param
     # if decompose_weights:
@@ -309,6 +333,7 @@ def tune_decompose(config, checkpoint_dir, data_dir, *args, **kwargs):
 
 
 @app.command()
+@typecast
 def hype(
     layers: List[int],
     lr: float = 1.e-1,
