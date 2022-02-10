@@ -94,7 +94,7 @@ def train(
     # TODO add data augmentation
     train_loader = DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
     valid_loader = DataLoader(valid_dataset, batch_size=batch, num_workers=data_workers)
-    test_loader = DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
+    test_loader = DataLoader(test_dataset, batch_size=batch, num_workers=data_workers)
     
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
 
