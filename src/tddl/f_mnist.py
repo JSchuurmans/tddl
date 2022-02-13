@@ -20,7 +20,7 @@ from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 from torchvision.models import resnet18 
 
-from tddl.data.loaders import get_f_mnist_loader
+from tddl.data.loaders import fmnist_stratified_loaders, get_f_mnist_loader
 from tddl.models.resnet_torch import get_resnet_from_torch
 from tddl.trainer import Trainer
 from tddl.models.wrn import WideResNet
@@ -89,12 +89,12 @@ def train(
         "save_model_name": "cnn"
     }
 
-    train_dataset, valid_dataset, test_dataset = get_f_mnist_loader(data_dir)
-
-    # TODO add data augmentation
-    train_loader = DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
-    valid_loader = DataLoader(valid_dataset, batch_size=batch, num_workers=data_workers)
-    test_loader = DataLoader(test_dataset, batch_size=batch, num_workers=data_workers)
+    train_loader, valid_loader, test_loader = fmnist_stratified_loaders(
+        path=data_dir,
+        batch_size=batch,
+        data_workers=data_workers,
+        valid_size=5000,
+    )
     
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
 
@@ -242,6 +242,9 @@ def decompose(
     )
     torch.save(model, logdir / "model_after_fact.pth")
 
+    # TODO set this to a different seed
+    set_seed(seed)
+    
     # TODO modules are in here, they are not serializable
     # with open(logdir.joinpath('factorization.json'), 'w') as f:
     #     json.dump(output, f)
