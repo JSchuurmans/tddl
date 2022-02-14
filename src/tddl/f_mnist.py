@@ -79,7 +79,7 @@ def train(
     if seed is None:
         seed = t
     set_seed(seed)
-    MODEL_NAME = f"{model_name}_{depth}_d{dropout}_{batch}_sgd_l{lr}_g{gamma}_s{seed == t}"
+    MODEL_NAME = f"{model_name}_{depth}_d{dropout}_{batch}_{optimizer}_l{lr}_g{gamma}_s{seed == t}"
     logdir = logdir.joinpath(str(t), MODEL_NAME)
     save = {
         "save_every_epoch": None,
@@ -162,6 +162,7 @@ def train(
 def decompose(
     layers: List[int],
     baseline_path: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist/parn_18_d0.5_256_sgd_l0.1_g0.1/1629473591/cnn_best"),
+    factorized_path: Path = None,
     factorization: str = 'tucker',
     decompose_weights: bool = True,
     td_init: float = None, # 0.02
@@ -230,20 +231,24 @@ def decompose(
     }
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
 
-    model = torch.load(baseline_path)
-    output = factorize_network(
-        model,
-        layers=layers,
-        factorization=factorization,
-        rank=rank,
-        decompose_weights=decompose_weights,
-        init_std=td_init,
-        return_error=return_error,
-    )
+    
+    if factorized_path is not None:
+        model = torch.load(factorized_path)
+        output = None
+    else:
+        model = torch.load(baseline_path)
+        output = factorize_network(
+            model,
+            layers=layers,
+            factorization=factorization,
+            rank=rank,
+            decompose_weights=decompose_weights,
+            init_std=td_init,
+            return_error=return_error,
+        )
+    # Save the factorized model to the current logdir, also if it is loaded from another run
     torch.save(model, logdir / "model_after_fact.pth")
 
-    # TODO set this to a different seed
-    set_seed(seed)
     
     # TODO modules are in here, they are not serializable
     # with open(logdir.joinpath('factorization.json'), 'w') as f:
@@ -277,11 +282,12 @@ def decompose(
         optimizer.load_state_dict(optimizer_state)
         scheduler.load_state_dict(scheduler_state)
 
-    train_dataset, valid_dataset, test_dataset = get_f_mnist_loader(data_dir)
-
-    train_loader = DataLoader(train_dataset, batch_size=batch, num_workers=data_workers)
-    valid_loader = DataLoader(valid_dataset, batch_size=batch, num_workers=data_workers)
-    test_loader = DataLoader(test_dataset, batch_size=batch, num_workers=data_workers)
+    train_loader, valid_loader, test_loader = fmnist_stratified_loaders(
+        path=data_dir,
+        batch_size=batch,
+        data_workers=data_workers,
+        valid_size=5000,
+    )
 
 
     # TODO Session not detected. You should not be calling this function outside `tune.run` or while using the class API.

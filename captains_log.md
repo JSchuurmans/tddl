@@ -28,3 +28,26 @@ do python src/tddl/f_mnist.py main --config-path configs/tud/f_mnist/decompose/d
 done;
 done
 ```
+
+## 14 Feb
+
+Use for loop in bash to run multiple config files and do additional loop for error bars:
+```
+for i in {1..5};
+do for LAYER in 15 19 38 41 44 60 63; 
+do for FACT in cp tucker; 
+do echo "{$i}-{$LAYER}-{$FACT}" && python src/tddl/f_mnist.py main --config-path configs/tud/f_mnist/decompose/sgd/dec-$FACT-r0.5-$LAYER.yml;
+done;
+done;
+done
+```
+
+```
+for i in {1..5};
+do for RANK in 1 25 50 75 90; 
+do for FACT in cp tucker; 
+do echo "{$i}-{$RANK}-{$FACT}" && python src/tddl/f_mnist.py main --config-path configs/tud/f_mnist/decompose/sgd/dec-$FACT-r0.5-28.yml --rank=0.$RANK;
+done;
+done;
+done
+```
