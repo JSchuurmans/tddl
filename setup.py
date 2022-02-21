@@ -17,7 +17,9 @@ dev_requirements = [
     'tensorboard',
     'jupyterlab',
     'pandas',
-    'gitpython'
+    'gitpython',
+    'seaborn',
+    'statsmodels',
     # 'kaggle',
     # 'pytest',
     # 'pytest-flake8',
