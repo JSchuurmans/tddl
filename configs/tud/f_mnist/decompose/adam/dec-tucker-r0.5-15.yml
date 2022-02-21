@@ -1,6 +1,6 @@
 # model
 model_name: rn18
-baseline_path: /bigdata/f_mnist/logs/1644265976/rn18/rn18_18_dNone_256_sgd_l0.001_g0.1_sTrue/cnn_best.pth
+baseline_path: /bigdata/f_mnist/logs/baselines/1644945876/rn18_18_dNone_256_adam_l0.001_g0.1_sTrue/cnn_best.pth
 
 # training
 batch: 256
@@ -14,11 +14,11 @@ factorization: 'tucker'
 decompose_weights: true
 rank: 0.5
 layers:
-- 60
+- 15
 
 # datalogging
 data_dir: "/bigdata/f_mnist" 
 logdir: "/bigdata/f_mnist/logs" 
 
 # hardware
-data_workers: 16
+data_workers: 8
