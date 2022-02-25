@@ -64,6 +64,7 @@ def train(
     milestones: List[int] = None,
     optimizer: str = None,
     weight_decay: float = 1e-4,
+    t: float = None,
     **kwargs
 ) -> None:
 
@@ -75,7 +76,8 @@ def train(
     
     if not logdir.is_dir():
         raise FileNotFoundError("{0} folder does not exist!".format(logdir))
-    t = round(time())
+    if t is None:
+        t = round(time())
     if seed is None:
         seed = t
     set_seed(seed)
@@ -184,6 +186,7 @@ def decompose(
     return_error: bool = False,
     weight_decay: float = 0,
     optimizer: str = 'adam',
+    t: float = None,
     **kwargs,
 ) -> None:
 
@@ -214,10 +217,10 @@ def decompose(
         raise FileNotFoundError("{0} folder does not exist!".format(logdir))
     td = "td" if not decompose_weights else "lr"
     
-    if seed is None:
+    if t is None:
         t = round(time())
-    else:
-        t = seed
+    if seed is None:
+        seed = t
     set_seed(seed)
 
     MODEL_NAME = f"{model_name}-{td}-{layers}-{factorization}-{rank}-d{str(decompose_weights)}-i{td_init}_bn_{batch}_sgd_l{lr}_g{gamma}_s{seed == t}"
@@ -288,7 +291,6 @@ def decompose(
         data_workers=data_workers,
         valid_size=5000,
     )
-
 
     # TODO Session not detected. You should not be calling this function outside `tune.run` or while using the class API.
     trainer = Trainer(
@@ -519,12 +521,12 @@ def main(
         config_data.update([item.strip("--").split('=')])
     # typer.echo(f"Config, modified with inputs: {config_data}")
     
+    t = round(time())
     seed = config_data.get("seed")
     if seed is None:
-        t = round(time())
-    else:
-        t = seed
-    config_data.update({"seed":t})
+        seed = t
+    config_data.update({"seed":seed})
+    config_data.update({"t":t})
 
     repo = git.Repo(search_parent_directories=True)
     sha = repo.head.object.hexsha

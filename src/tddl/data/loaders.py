@@ -93,27 +93,30 @@ def get_f_mnist_loader(path):
     
     return train_dataset, valid_dataset, test_dataset
 
+
 def fmnist_stratified_loaders(
     path: Path,
     batch_size: int,
     data_workers: int,
     valid_size: int = 5000,
+    random_transform_training: bool = True,
 ) -> Tuple[DataLoader,...]:
     '''
         input:
         - valid_size: total number of validation observations
     '''
     
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307,), (0.3081,)),
+    ])
+
     transform_train = transforms.Compose([
         transforms.RandomCrop(28, padding=4),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,)),
-    ])
-    transform_test = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,)),
-    ])
+    ]) if random_transform_training else transform_test
 
     dataset = datasets.FashionMNIST(path, train=True, download=True)
 

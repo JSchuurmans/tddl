@@ -74,3 +74,23 @@ done;
 done;
 done
 ```
+
+## 21 Feb
+Fix decomposition, vary training seed
+
+```
+for i in {1..5};
+do for LAYER in 15 19 38 41 44 60 63; 
+do echo "{$i}-{$LAYER}" && python src/tddl/f_mnist.py main --config-path configs/tud/f_mnist/fixed_decomp/adam/dec-cp-r0.5-$LAYER.yml --logdir="/bigdata/f_mnist/logs/fixed_decomp";
+done;
+done
+```
+
+
+```
+for i in {1..5};
+do for RANK in 1 25 5 75 9; 
+do echo "{$i}-{$RANK}" && python src/tddl/f_mnist.py main --config-path configs/tud/f_mnist/fixed_decomp/adam/dec-cp-r0.$RANK-28.yml --logdir="/bigdata/f_mnist/logs/fixed_decomp";
+done;
+done
+```
