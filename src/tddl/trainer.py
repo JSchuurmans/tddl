@@ -82,6 +82,12 @@ class Trainer:
         for i in trange(epochs):
             delta_t = self.train_epoch()
             self.writer.add_scalar("Time/train/epoch_in_sec", delta_t, i)
+            
+            self.writer.add_scalar(
+                "LearningRate", 
+                self.optimizer.param_groups[0]['lr'], 
+                i,
+            )
 
             if self.scheduler is not None:
                 self.scheduler.step()
