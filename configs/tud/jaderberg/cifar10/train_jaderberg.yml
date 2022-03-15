@@ -1,0 +1,25 @@
+# data
+dataset: cifar10
+
+# model
+model_name: jad
+
+# training
+batch: 128 # unknown
+epochs: 100 # unknown
+optimizer: 'sgd'
+momentum: 0.9
+lr: 1.0e-1 # unknown
+gamma: 0.1 # unknown
+milestones: # unknown
+- 30
+- 60
+- 90
+weight_decay: 0.0005
+
+# datalogging
+data_dir: "/bigdata/cifar10" 
+logdir: "/bigdata/cifar10/logs/jaderberg" 
+
+# hardware
+data_workers: 8

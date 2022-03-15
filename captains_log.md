@@ -153,3 +153,42 @@ done;
 done
 ```
 
+## 12 Mar
+
+```
+for i in {1..5};
+do for LAYER in 15 19 38 41 44 60 63;
+do for RANK in 1 25 
+do for FACT in cp tucker; 
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/cifar10/decompose/dec-$FACT-r0.5-$LAYER.yml --rank=0.$RANK;
+done;
+done;
+done;
+done
+```
+
+```
+for i in {1..5};
+do for LAYER in 15 19 38 41 44 60 63;
+do for RANK in 1 25 
+do for FACT in cp tucker; 
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/f_mnist/decompose/adam/dec-$FACT-r0.5-$LAYER.yml --rank=0.$RANK;
+done;
+done;
+done;
+done
+```
+
+## 14 Mar
+
+`python src/tddl/features/extract.py main /bigdata/cifar10/logs/decomposed --dataset cifar10 --split train --aggregate --skip-existing`
+
+
+same for f_mnist
+
+## 15
+
+`python train.py main --config-path configs/tud/garipov/cifar10/train_garipov.yml`
+
+`python train.py main --config-path configs/tud/garipov/cifar10/train_garipov.yml --batch=256`
+

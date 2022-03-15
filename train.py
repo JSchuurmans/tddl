@@ -22,6 +22,7 @@ from torchvision.models import resnet18
 
 from tddl.data.loaders import fetch_loaders
 from tddl.models.resnet_torch import get_resnet_from_torch
+from tddl.models.cnn import GaripovNet, JaderbergNet
 from tddl.trainer import Trainer
 from tddl.models.wrn import WideResNet
 from tddl.models.pa_resnet import PA_ResNet18
@@ -43,7 +44,7 @@ app = typer.Typer()
 
 tl.set_backend('pytorch')
 
-DATASET_MODEL_PARAMETERS = {
+DATASET_MODEL_PARAMETERS = { # TODO: write this as config file
     'fminst':{
         'num_classes': 10,
         'in_channels': 1,
@@ -77,6 +78,7 @@ def train(
     weight_decay: float = 1e-4,
     t: float = None,
     dataset: str ='fmnist',
+    momentum: float = 0.9,
     **kwargs
 ) -> None:
 
@@ -133,7 +135,19 @@ def train(
             in_channels=model_parameters['in_channels'],
             num_classes=model_parameters['num_classes'],
         ).cuda()
-        default_milestones = [100, 150]
+        # default_milestones = [100, 150]
+    elif model_name == "gar":
+        model = GaripovNet(
+            in_channels=model_parameters['in_channels'],
+            num_classes=model_parameters['num_classes'],
+        ).cuda()
+    elif model_name == "jad":
+        model = JaderbergNet(
+            in_channels=model_parameters['in_channels'],
+            num_classes=model_parameters['num_classes'],
+        ).cuda()
+    else:
+        raise NotImplementedError
 
     n_param = count_parameters(model)
     with open(logdir.joinpath('n_param.json'), 'w') as f:
@@ -142,7 +156,7 @@ def train(
     if optimizer == "adam":
         optimizer = optim.Adam(model.parameters(), lr=lr)
     elif optimizer == "sgd":
-        optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=weight_decay)
+        optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
 
     
     scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=gamma) if milestones is not None else None
@@ -167,7 +181,6 @@ def train(
         json.dump(results, f)
 
     writer.close()
-
 
 
 @app.command()
@@ -199,6 +212,7 @@ def decompose(
     optimizer: str = 'adam',
     t: float = None,
     dataset: str = 'fmnist',
+    momentum: float = 0.9,
     **kwargs,
 ) -> None:
 
@@ -282,7 +296,7 @@ def decompose(
     if optimizer == "adam":
         optimizer = optim.Adam(model.parameters(), lr=lr)
     elif optimizer == "sgd":
-        optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=weight_decay)
+        optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
     # TODO check schedulers
     # scheduler = lr_scheduler.StepLR(optimizer, step_size=1, gamma=gamma) if gamma else None
     # if not decompose_weights:

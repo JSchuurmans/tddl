@@ -18,7 +18,7 @@ layers:
 
 # datalogging
 data_dir: "/bigdata/f_mnist" 
-logdir: "/bigdata/f_mnist/logs" 
+logdir: "/bigdata/f_mnist/logs/" 
 
 # hardware
 data_workers: 8
