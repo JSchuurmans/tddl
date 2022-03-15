@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List
 import json
 import os
+from datetime import datetime
 
 import yaml
 from tqdm import tqdm
@@ -187,6 +188,14 @@ def aggregate_results(
     with open(path / f"results_feature_metrics_{split}.json", 'w') as outfile:
         json.dump(feature_metrics, outfile)
 
+    
+# def existing_results(path):
+#     return path / results_feature_metrics_{split}.json
+
+    # check if file exists
+
+    # check 
+
 
 @app.command()
 def main(
@@ -196,6 +205,7 @@ def main(
     split: str = 'train',
     dataset: str = 'cifar10',
     aggregate: bool = False,
+    skip_existing: bool = False,
 ):
 
     set_seed(seed)
@@ -204,8 +214,15 @@ def main(
     for nr in tqdm(os.listdir(path)):
         path_nr = path / nr
         dirs = [d for d in os.listdir(path_nr) if os.path.isdir(path_nr / d)]
+        path_modelname = path_nr / dirs[0]
+
+        if skip_existing and (path_modelname / f"results_feature_metrics_{split}.json").exists():
+            print(f"Skipping: {path_modelname} - {datetime.fromtimestamp(int(nr))}")
+            continue
+
+        print(f"Processing: {path_modelname} - {datetime.fromtimestamp(int(nr))}")
         process_features(
-            path = path_nr / dirs[0],
+            path = path_modelname,
             split=split,
             data_workers=data_workers,
             dataset=dataset,
@@ -213,7 +230,7 @@ def main(
 
         if aggregate:
             aggregate_results(
-                path_nr / dirs[0], 
+                path_modelname, 
                 split,
             )
 
