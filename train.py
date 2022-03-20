@@ -2,7 +2,7 @@ import json
 import os
 from time import time
 from pathlib import Path
-from typing import List
+from typing import List, Union
 from functools import partial
 
 import git
@@ -186,7 +186,7 @@ def train(
 @app.command()
 @typecast
 def decompose(
-    layers: List[int],
+    layers: Union[int, List[int]],
     baseline_path: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist/parn_18_d0.5_256_sgd_l0.1_g0.1/1629473591/cnn_best"),
     factorized_path: Path = None,
     factorization: str = 'tucker',
@@ -215,6 +215,9 @@ def decompose(
     momentum: float = 0.9,
     **kwargs,
 ) -> None:
+
+    if type(layers) == int:
+        layers = [layers]
 
     logdir, data_dir, baseline_path = check_paths(
         logdir, data_dir, baseline_path
