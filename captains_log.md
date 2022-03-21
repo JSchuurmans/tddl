@@ -205,3 +205,26 @@ done;
 done;
 done
 ```
+**Tucker FAILED: no config**
+```
+for i in {1..5};
+do for LAYER in 2 4 6 8 10;
+do for RANK in 1 25 5 75 9;
+do for FACT in tucker;    
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/garipov/cifar10/decompose/dec-cp-r0.5-$LAYER.yml --rank=0.$RANK --factorization=$FACT; 
+done;
+done;
+done;
+done
+```
+
+## 21 Mar
+python src/tddl/features/extract.py main /bigdata/cifar10/logs/garipov/decomposed --dataset cifar10 --split train --aggregate --skip-existing --data-workers 8
+
+python src/tddl/features/extract.py main /bigdata/cifar10/logs/garipov/decomposed --dataset cifar10 --split valid --aggregate --skip-existing --data-workers 8
+
+### TODO
+run features for decomposed garipove
+- train
+- valid
+ 
