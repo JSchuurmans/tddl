@@ -45,7 +45,7 @@ app = typer.Typer()
 tl.set_backend('pytorch')
 
 DATASET_MODEL_PARAMETERS = { # TODO: write this as config file
-    'fminst':{
+    'fmnist':{
         'num_classes': 10,
         'in_channels': 1,
     },

@@ -223,8 +223,26 @@ python src/tddl/features/extract.py main /bigdata/cifar10/logs/garipov/decompose
 
 python src/tddl/features/extract.py main /bigdata/cifar10/logs/garipov/decomposed --dataset cifar10 --split valid --aggregate --skip-existing --data-workers 8
 
+
+## 22 Mar
+
+`python train.py main --config-path configs/tud/garipov/fmnist/train_garipov.yml`
+
+```
+for i in {1..5};
+do for LAYER in 2 4 6 8 10;
+do for RANK in 1 25 5 75 9;
+do for FACT in cp tucker;    
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/garipov/fmnist/decompose/dec-cp-r0.5-$LAYER.yml --rank=0.$RANK --factorization=$FACT; 
+done;
+done;
+done;
+done
+```
+
 ### TODO
-run features for decomposed garipove
-- train
-- valid
- 
+
+decompose FMNIST GaripovNet
+
+analyse feature space FMNIST GaripovNet
+
