@@ -240,9 +240,12 @@ done;
 done
 ```
 
+## 23 Mar
+`python src/tddl/features/extract.py main /bigdata/f_mnist/logs/garipov/decomposed --dataset fmnist --split train --aggregate --skip-existing --data-workers 8`
+
+`python src/tddl/features/extract.py main /bigdata/f_mnist/logs/garipov/decomposed --dataset fmnist --split valid --aggregate --skip-existing --data-workers 4`
+
+
 ### TODO
 
-decompose FMNIST GaripovNet
-
-analyse feature space FMNIST GaripovNet
 
