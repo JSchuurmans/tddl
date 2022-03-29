@@ -1,4 +1,7 @@
 import torch
+import tensorly as tl
+tl.set_backend('pytorch')
+
 
 def calculate_error(
     original, 
@@ -43,3 +46,8 @@ def calculate_relative_error(
     with torch.no_grad():
         return torch.norm(original-approximation.to(device=original.device), 
         **kwargs) / torch.norm(original, **kwargs)
+
+
+def relative_error(pre_weight, dec_weight):
+    with torch.no_grad():
+        return tl.norm(pre_weight-dec_weight)/tl.norm(pre_weight)

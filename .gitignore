@@ -2,6 +2,7 @@
 artifacts/
 runs/
 plots/
+notebooks/results/tables/
 
 # IDEs
 .idea
