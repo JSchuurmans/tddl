@@ -246,6 +246,152 @@ done
 `python src/tddl/features/extract.py main /bigdata/f_mnist/logs/garipov/decomposed --dataset fmnist --split valid --aggregate --skip-existing --data-workers 4`
 
 
-### TODO
 
 
+
+
+
+## 20 Jun
+
+### Run RN18 on CIFAR10 with TT
+
+```
+for i in {1..5};
+do for LAYER in 15 19 28 38 41 44 60 63;
+do for RANK in 1 25 5; 
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/rn18/cifar10/decompose/dec-tt-r0.5-$LAYER.yml --rank=0.$RANK --data-workers=4; 
+done;
+done;
+done
+```
+
+### Run GaripovNet on CIFAR10 with TT
+
+```
+for i in {1..5};
+do for LAYER in 2 4 6 8 10;
+do for RANK in 1 25 5 75 9;
+do for FACT in tt;
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/garipov/cifar10/decompose/dec-cp-r0.5-$LAYER.yml --rank=0.$RANK --factorization=$FACT --data-workers=4; 
+done;
+done;
+done;
+done
+```
+
+### Run GaripovNet on F-MNIST with TT
+
+```
+for i in {1..5};
+do for LAYER in 2 4 6 8 10;
+do for RANK in 1 25 5 75 9;
+do for FACT in tt;
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/garipov/fmnist/decompose/dec-cp-r0.5-$LAYER.yml --rank=0.$RANK --factorization=$FACT --data-workers=4; 
+done;
+done;
+done;
+done
+```
+
+## 21 Juni
+
+`python src/tddl/features/extract.py main /bigdata/f_mnist/logs/garipov/decomposed --dataset fmnist --split train --aggregate --skip-existing --data-workers 4`
+
+`python src/tddl/features/extract.py main /bigdata/cifar10/logs/garipov/decomposed --dataset cifar10 --split train --aggregate --skip-existing --data-workers 4`
+
+Move from `/bigdata/cifar10/logs/decomposed/tt/` to `/bigdata/cifar10/logs/decomposed/`
+
+`python src/tddl/features/extract.py main /bigdata/cifar10/logs/decomposed --dataset cifar10 --split train --aggregate --skip-existing --data-workers 4`
+
+
+## 15 Aug
+
+### Move old TT - 
+#### ResNet CIFAR-10
+`cd /bigdata/cifar10/logs/decomposed`
+
+`rm -rf 1655* `
+
+#### CIFAR-10 GaripovNet
+`cd /bigdata/cifar10/logs/garipov/decomposed`
+
+`rm -rf 1655* `
+
+#### FMNIST GaripovNet
+`cd /bigdata/f_mnist/logs/garipov/decomposed`
+
+`rm -rf 1655* `
+
+### TT ResNet CIFAR-10
+
+```
+for i in {1..5};
+do for LAYER in 15 19 28 38 41 44 60 63;
+do for RANK in 1; 
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/rn18/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4; 
+done;
+done;
+done
+```
+
+```
+for i in {1..5};
+do for LAYER in 15 19 28 38 41 44 60 63;
+do for RANK in 25; 
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/rn18/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4; 
+done;
+done;
+done
+```
+
+```
+for i in {1..5};
+do for LAYER in 15 19 28 38 41 44 60 63;
+do for RANK in 5; 
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/rn18/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4; 
+done;
+done;
+done
+```
+
+
+
+
+
+# TODO
+
+
+
+### Garipov CIFAR-10 with TT
+```
+for i in {1..5};
+do for LAYER in 2 4 6 8 10;
+do for RANK in 1 25 5 75 9;
+do echo "{$i}-{$LAYER}-{$RANK}" && python train.py main --config-path configs/tud/garipov/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4;
+done;
+done;
+done
+```
+
+### Run GaripovNet on F-MNIST with TT
+
+```
+for i in {1..5};
+do for LAYER in 2 4 6 8 10;
+do for RANK in 1 25 5 75 9;
+do echo "{$i}-{$LAYER}-{$RANK}" && python train.py main --config-path configs/tud/garipov/fmnist/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4;
+done;
+done;
+done
+```
+
+## 16 Aug
+`python src/tddl/features/extract.py main /bigdata/f_mnist/logs/garipov/decomposed --dataset fmnist --split train --aggregate --skip-existing --data-workers 4`
+
+`python src/tddl/features/extract.py main /bigdata/cifar10/logs/garipov/decomposed --dataset cifar10 --split train --aggregate --skip-existing --data-workers 4`
+
+`python src/tddl/features/extract.py main /bigdata/cifar10/logs/decomposed --dataset cifar10 --split train --aggregate --skip-existing --data-workers 4`
+
+# TODO
+
+`python train.py main --config-path configs/tud/rn18/cifar10/factorized/dec-cp-r0.5-15.yml`

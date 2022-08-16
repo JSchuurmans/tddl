@@ -162,7 +162,10 @@ def train(
     scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=gamma) if milestones is not None else None
     # scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
 
-    trainer = Trainer(train_loader, valid_loader, model, optimizer, writer, scheduler=scheduler, save=save)
+    trainer = Trainer(
+        train_loader, valid_loader, test_loader,
+        model, optimizer, writer, scheduler=scheduler, save=save
+    )
     results = trainer.train(epochs=epochs)
 
     # this uses final model, need to use best model
@@ -324,7 +327,7 @@ def decompose(
 
     # TODO Session not detected. You should not be calling this function outside `tune.run` or while using the class API.
     trainer = Trainer(
-        train_loader, valid_loader, 
+        train_loader, valid_loader, test_loader,
         model, optimizer, writer, 
         scheduler=scheduler, save=save, tuning=tuning)
     
@@ -332,14 +335,19 @@ def decompose(
         train_acc, train_loss = trainer.test(loader="train")
         writer.add_scalar("Accuracy/before_finetuning/train", train_acc)
         writer.add_scalar("Loss/before_finetuning/train", train_loss)
-        valid_acc, valid_loss = trainer.test()
+        valid_acc, valid_loss = trainer.test(loader="valid")
         writer.add_scalar("Accuracy/before_finetuning/valid", valid_acc)
         writer.add_scalar("Loss/before_finetuning/valid", valid_loss)
+        test_acc, test_loss = trainer.test(loader="test")
+        writer.add_scalar("Accuracy/before_finetuning/test", test_acc)
+        writer.add_scalar("Loss/before_finetuning/test", test_loss)
         results_before_training = {
             "train_acc": train_acc,
             "train_loss": train_loss,
             "valid_acc": valid_acc,
             "valid_loss": valid_loss,
+            "test_acc": test_acc,
+            "test_loss": test_loss,
         }
         with open(logdir.joinpath('results_before_training.json'), 'w') as f:
             json.dump(results_before_training, f)

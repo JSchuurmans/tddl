@@ -53,6 +53,7 @@ def process_factorized_networks(paths, baseline_path):
                 'rank': config_data['rank'],
                 'valid_acc': result['best_valid_acc'],
                 'valid_acc_before_ft': result_before_training['valid_acc'],
+                'test_acc_before_ft': result_before_training['test_acc'],
                 'n_param_fact': result['n_param_fact'],
                 'test_acc': result['test_acc'],
                 'lr': config_data['lr'],
@@ -84,6 +85,8 @@ def process_factorized_networks(paths, baseline_path):
 
             pre_weight = pre[2].weight
             dec_weight = dec[2].weight.to_tensor()
+            if config_data['factorization'] == 'tt':
+                dec_weight = dec_weight.permute(3, 0, 1, 2)
 
             relative_norm_weight = calculate_relative_error(pre_weight, dec_weight)
             scaled_norm_weight = calculate_scaled_error(pre_weight, dec_weight)

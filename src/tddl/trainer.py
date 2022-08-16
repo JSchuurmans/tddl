@@ -10,11 +10,13 @@ from ray import tune
 
 class Trainer:
     def __init__(
-        self, train_loader, valid_loader, model, optimizer, writer, 
+        self, train_loader, valid_loader, test_loader,
+        model, optimizer, writer, 
         scheduler=None, save=None, results={}, tuning=False,**kwargs
     ):
         self.train_data_loader = train_loader
         self.valid_loader = valid_loader
+        self.test_loader = test_loader
 
         self.optimizer = optimizer
         self.scheduler = scheduler if scheduler is not None else None
@@ -51,10 +53,12 @@ class Trainer:
         total_time = 0
         val_loss = 0.0
 
-        if loader is None:
+        if loader == "valid":
             loader = self.valid_loader
         elif loader == "train":
             loader = self.train_data_loader
+        elif loader == "test":
+            loader = self.test_loader
 
         t = tqdm(loader, total=int(len(loader)))
         for i, (batch, label) in enumerate(t):

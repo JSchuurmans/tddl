@@ -1,0 +1,29 @@
+# data
+dataset: cifar10
+
+# model
+model_name: gar
+baseline_path: /bigdata/cifar10/logs/garipov/baselines/1647358615/gar_18_dNone_128_sgd_l0.1_g0.1_w0.0_sTrue/cnn_best.pth
+
+# training
+batch: 128
+epochs: 10
+optimizer: 'sgd'
+momentum: 0.9
+lr: 1.0e-4
+gamma: 0
+weight_decay: 0
+
+# factorization
+factorization: 'tt'
+decompose_weights: true
+rank: 4.57
+layers:
+- 8
+
+# datalogging
+data_dir: "/bigdata/cifar10" 
+logdir: "/bigdata/cifar10/logs/garipov/decomposed" 
+
+# hardware
+data_workers: 8
