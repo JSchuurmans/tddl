@@ -391,8 +391,6 @@ done
 `python train.py main --config-path configs/tud/rn18/cifar10/factorized/fac-tucker-r0.5-15.yml`
 
 
-
-# TODO
 ```
 for i in {1..5};
 do for LAYER in 4;
