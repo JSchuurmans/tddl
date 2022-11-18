@@ -20,7 +20,7 @@ app = typer.Typer()
 @app.command()
 def train(
     epochs: int = 10,
-    logdir="/home/jetzeschuurman/gitProjects/phd/tddl/artifacts",
+    logdir="./artifacts",
     train_path="/bigdata/dogs-vs-cats/train/",
     valid_path="/bigdata/dogs-vs-cats/valid/",
 ):
@@ -52,7 +52,7 @@ def train(
 
 @app.command()
 def decompose(
-    pretrained: str = "/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/1625154185/model_52",
+    pretrained: str = "./artifacts/1625154185/model_52",
     layer_nr: int = 19,
     factorization: str = 'tucker',
     decompose_weights: bool = True,
@@ -60,7 +60,7 @@ def decompose(
     rank: float = 0.5,
     epochs: int = 10,
     lr: float = 1e-3,
-    logdir: str = "/home/jetzeschuurman/gitProjects/phd/tddl/artifacts",
+    logdir: str = "./tddl/artifacts",
     train_path: str = "/bigdata/dogs-vs-cats/train/",
     valid_path: str = "/bigdata/dogs-vs-cats/valid/",
     freeze_parameters: str = 'feat_clas',

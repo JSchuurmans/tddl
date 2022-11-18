@@ -1,6 +1,6 @@
 # model
 model_name: parn
-pretrained: "/scratch/jetzeschuurman/f_mnist/logs/parn_18_d0.5_256_sgd_l0.1_g0.1_sTrue/1633280228/cnn_best"
+pretrained: "./f_mnist/logs/parn_18_d0.5_256_sgd_l0.1_g0.1_sTrue/1633280228/cnn_best"
 
 # training
 batch: 256
@@ -30,8 +30,8 @@ layers:
   - 16
 
 # datalogging
-data_dir: "/scratch/jetzeschuurman/f_mnist/data" 
-logdir: "/scratch/jetzeschuurman/f_mnist/logs" 
+data_dir: "./f_mnist/data" 
+logdir: "./f_mnist/logs" 
 
 # hardware
 data_workers: 2

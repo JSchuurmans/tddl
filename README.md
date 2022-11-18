@@ -40,13 +40,13 @@ https://pytorch.org/tutorials/beginner/hyperparameter_tuning_tutorial.html
 ### Train baseline model
 
 #### Pretrain ResNet-18 on CIFAR-10
-`python train.py main --config-path configs/tud/cifar10/train_rn18.yml`
+`python train.py main --config-path configs/cifar10/train_rn18.yml`
 
 #### Pretrain GaripovNet on CIFAR-10
-`python train.py main --config-path configs/tud/garipov/cifar10/train_garipov.yml`
+`python train.py main --config-path configs/garipov/cifar10/train_garipov.yml`
 
 #### Pretrain GaripovNet on F-MNIST
-`python train.py main --config-path configs/tud/garipov/fmnist/train_garipov.yml`
+`python train.py main --config-path configs/garipov/fmnist/train_garipov.yml`
 
 
 
@@ -59,7 +59,7 @@ for i in {1..5};
 do for LAYER in 15 19 28 38 41 44 60 63;
 do for RANK in 1 25 5 75 9; 
 do for FACT in cp tucker;
-do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/rn18/cifar10/decompose/dec-$FACT-r0.5-$LAYER.yml --data-workers=8 --rank=0.$RANK; 
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/rn18/cifar10/decompose/dec-$FACT-r0.5-$LAYER.yml --data-workers=8 --rank=0.$RANK; 
 done;
 done;
 done;
@@ -71,7 +71,7 @@ done
 for i in {1..5};
 do for LAYER in 15 19 28 38 41 44 60 63;
 do for RANK in 1 25 5 75 9; 
-do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/rn18/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4; 
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/rn18/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4; 
 done;
 done;
 done
@@ -84,7 +84,7 @@ for i in {1..5};
 do for LAYER in 2 4 6 8 10;
 do for RANK in 1 25 5 75 9;
 do for FACT in cp tucker;    
-do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/garipov/fmnist/decompose/dec-cp-r0.5-$LAYER.yml --rank=0.$RANK --factorization=$FACT; 
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/garipov/fmnist/decompose/dec-cp-r0.5-$LAYER.yml --rank=0.$RANK --factorization=$FACT; 
 done;
 done;
 done;
@@ -96,7 +96,7 @@ done
 for i in {1..5};
 do for LAYER in 2 4 6 8 10;
 do for RANK in 1 25 5 75 9;
-do echo "{$i}-{$LAYER}-{$RANK}" && python train.py main --config-path configs/tud/garipov/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4;
+do echo "{$i}-{$LAYER}-{$RANK}" && python train.py main --config-path configs/garipov/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4;
 done;
 done;
 done
@@ -108,7 +108,7 @@ done
 for i in {1..5};
 do for LAYER in 2 4 6 8 10;
 do for RANK in 1 25 5 75 9;
-do echo "{$i}-{$LAYER}-{$RANK}" && python train.py main --config-path configs/tud/garipov/fmnist/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4;
+do echo "{$i}-{$LAYER}-{$RANK}" && python train.py main --config-path configs/garipov/fmnist/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4;
 done;
 done;
 done

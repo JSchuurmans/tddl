@@ -49,7 +49,7 @@ tl.set_backend('pytorch')
 def train(
     batch: int = 256,
     epochs: int = 200,
-    logdir: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist"),
+    logdir: Path = Path("./tddl/artifacts/f_mnist"),
     lr: float = 0.1,
     gamma: float = 0.1,
     dropout: float = None,
@@ -163,7 +163,7 @@ def train(
 @typecast
 def decompose(
     layers: List[int],
-    baseline_path: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist/parn_18_d0.5_256_sgd_l0.1_g0.1/1629473591/cnn_best"),
+    baseline_path: Path = Path("./artifacts/f_mnist/parn_18_d0.5_256_sgd_l0.1_g0.1/1629473591/cnn_best"),
     factorized_path: Path = None,
     factorization: str = 'tucker',
     decompose_weights: bool = True,
@@ -171,7 +171,7 @@ def decompose(
     rank: float = 0.5,
     epochs: int = 200,
     lr: float = 0.1,
-    logdir: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist"),
+    logdir: Path = Path("./artifacts/f_mnist"),
     # freeze_parameters: bool = False,
     batch: int = 256,
     gamma: float = 0,
@@ -353,13 +353,13 @@ def hype(
     max_epochs: int = 10,
     gpus_per_trial: int = 1,
     cpus_per_trial: int = 4,
-    baseline_path: str = "/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist/parn_18_d0.5_256_sgd_l0.1_g0.1/1629473591/cnn_best",
+    baseline_path: str = "./artifacts/f_mnist/parn_18_d0.5_256_sgd_l0.1_g0.1/1629473591/cnn_best",
     factorization: str = 'tucker',
     decompose_weights: bool = True,
     td_init: float = 0.02,
     rank = 0.5,
     epochs: int = 200,
-    logdir: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist"),
+    logdir: Path = Path("./artifacts/f_mnist"),
     # freeze_parameters: bool = False,
     batch: int = 256,
     gamma: float = 0,
@@ -509,7 +509,7 @@ def hype(
 )
 def main(
     ctx: typer.Context,
-    config_path: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl"),
+    config_path: Path = Path("./"),
 ) -> None:
     
     config_data = {}
@@ -538,8 +538,6 @@ def main(
     with open(config_log, 'w', encoding='utf8') as outfile:
         yaml.dump(config_data, outfile, default_flow_style=False, allow_unicode=True)
 
-    # config_data_log = yaml.load(Path("/home/jetzeschuurman/gitProjects/phd/tddl/tmp/1637934961/config.yml").read_text(), Loader=yaml.Loader)
-    
     if config_data.get('tune'):
         hype(**config_data)
 
