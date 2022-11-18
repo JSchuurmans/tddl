@@ -356,12 +356,6 @@ done
 
 
 
-
-
-# TODO
-
-
-
 ### Garipov CIFAR-10 with TT
 ```
 for i in {1..5};
@@ -392,6 +386,62 @@ done
 
 `python src/tddl/features/extract.py main /bigdata/cifar10/logs/decomposed --dataset cifar10 --split train --aggregate --skip-existing --data-workers 4`
 
-# TODO
+# Train factorized model from random init
 
-`python train.py main --config-path configs/tud/rn18/cifar10/factorized/dec-cp-r0.5-15.yml`
+`python train.py main --config-path configs/tud/rn18/cifar10/factorized/fac-tucker-r0.5-15.yml`
+
+
+
+# TODO
+```
+for i in {1..5};
+do for LAYER in 4;
+do for RANK in 5;
+do echo "{$i}-{$LAYER}-{$RANK}" && python train.py main --config-path configs/tud/garipov/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=6;
+done;
+done;
+done
+```
+
+```
+for i in {1..5};
+do for LAYER in 4;
+do for RANK in 25;
+do echo "{$i}-{$LAYER}-{$RANK}" && python train.py main --config-path configs/tud/garipov/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=6;
+done;
+done;
+done
+```
+
+## 21 Sept
+```
+for i in {1..5};
+do for LAYER in 15 19 28 38 41 44 60 63;
+do for RANK in 75 9; 
+do for FACT in cp;
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/rn18/cifar10/decompose/dec-tucker-r0.5-$LAYER.yml --data-workers=8 --rank=0.$RANK; 
+done;
+done;
+done;
+done
+```
+
+```
+for i in {1..5};
+do for LAYER in 15 19 28 38 41 44 60 63;
+do for RANK in 75 9;
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/rn18/cifar10/decompose/dec-cp-r0.5-$LAYER.yml --data-workers=8 --rank=0.$RANK; 
+done;
+done;
+done
+```
+
+```
+for i in {1..5};
+do for LAYER in 15 19 28 38 41 44 60 63;
+do for RANK in 75 9;
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/rn18/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=8; 
+done;
+done;
+done
+```

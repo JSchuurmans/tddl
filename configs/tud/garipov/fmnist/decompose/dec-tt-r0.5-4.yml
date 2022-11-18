@@ -17,7 +17,7 @@ weight_decay: 0
 # factorization
 factorization: 'tt'
 decompose_weights: true
-rank: 1.43
+rank: 3.52
 layers:
 - 4
 

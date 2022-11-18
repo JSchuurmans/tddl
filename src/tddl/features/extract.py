@@ -210,6 +210,7 @@ def main(
     # generate list from path
     for nr in tqdm(os.listdir(path)):
         path_nr = path / nr
+        print(path_nr)
         dirs = [d for d in os.listdir(path_nr) if os.path.isdir(path_nr / d)]
         path_modelname = path_nr / dirs[0]
 

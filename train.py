@@ -281,6 +281,7 @@ def decompose(
             init_std=td_init,
             return_error=return_error,
         )
+    model.cuda() # needed for factorized training
     # Save the factorized model to the current logdir, also if it is loaded from another run
     torch.save(model, logdir / "model_after_fact.pth")
 
