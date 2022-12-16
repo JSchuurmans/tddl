@@ -443,3 +443,60 @@ done;
 done;
 done
 ```
+
+# Fine-tune all layers with different compression levels
+
+## 15 Dec
+
+`python train.py main --config-path configs/tud/garipov/cifar10/dbs/dbs-tucker-r0.5.yml`
+
+```bash
+for RANK in 1 75 9;
+do echo "{$RANK}" && python train.py main --config-path configs/tud/garipov/cifar10/dbs/dbs-tucker-r0.$RANK.yml; 
+done
+```
+
+```bash
+for RANK in 1 75 9;
+do echo "{$RANK}" && python train.py main --config-path configs/tud/garipov/cifar10/dbs/dbs-tucker-r0.$RANK.yml-constant; 
+done
+```
+
+```bash
+for RANK in 1 25 5 75 9;
+do echo "{$RANK}" && python train.py main --config-path configs/tud/rn18/cifar10/dbs/dbs-tucker-r0.1.yml --rank=0.$RANK; 
+done
+```
+
+```bash
+for RANK in 1 25 5 75 9;
+do echo "{$RANK}" && python train.py main --config-path configs/tud/rn18/cifar10/dbs/dbs-tucker-r0.1-constant.yml --rank=0.$RANK; 
+done
+```
+
+## 16 Dec
+
+```bash
+for RANK in 1 25 5 75 9;
+do echo "{$RANK}" && python train.py main --config-path configs/tud/garipov/cifar10/dbs/dbs-cp-r0.5.yml --rank=0.$RANK; 
+done
+```
+
+```bash
+for RANK in 1 25 5 75 9;
+do echo "{$RANK}" && python train.py main --config-path configs/tud/garipov/cifar10/dbs/dbs-cp-r0.5-constant.yml --rank=0.$RANK; 
+done
+```
+
+
+```bash
+for RANK in 1 25 5 75 9;
+do echo "{$RANK}" && python train.py main --config-path configs/tud/rn18/cifar10/dbs/dbs-cp-r0.1.yml --rank=0.$RANK; 
+done
+```
+
+```bash
+for RANK in 1 25 5 75 9;
+do echo "{$RANK}" && python train.py main --config-path configs/tud/rn18/cifar10/dbs/dbs-cp-r0.1-constant.yml --rank=0.$RANK; 
+done
+```

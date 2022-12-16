@@ -1,15 +1,19 @@
+import copy
+
 import torch
 import tltorch
 from tddl.utils.prime_factors import get_prime_factors
 from tddl.utils.approximation import calculate_relative_error
+
+
+RESNET_LAYERS = [0,6,9,12,15,19,22,25,28,31,35,38,41,44,47,51,54,57,60,63,66]
+
 
 def factorize_layer(
     module,
     factorization='tucker',
     rank=0.5,
     decompose_weights=True,
-    # fixed_rank_modes=None,
-    # decomposition_kwargs={},
     init_std=None,
     return_error=False,
     **kwargs,
@@ -46,15 +50,15 @@ def factorize_layer(
     if init_std:
         fact_module.weight.normal_(0, init_std)
 
-    # if return_error:
-    #     error = calculate_relative_error(
-    #         original=module.weight,
-    #         approximation=fact_module.weight.to_tensor(),
-    #     )
-    # else:
-    #     error = None
-
-    return fact_module
+    if return_error:
+        error = calculate_relative_error(
+            original=module.weight,
+            approximation=fact_module.weight.to_tensor(),
+        )
+        return fact_module, error
+        
+    else:
+        return fact_module
 
 
 def factorize_network(
@@ -80,7 +84,7 @@ def factorize_network(
 
         i+=1
         
-        if children == {}:
+        if children == {} or m._get_name()=='FactorizedConv':
             return m
         else:
         # look for children from children... to the last child!
@@ -90,22 +94,13 @@ def factorize_network(
                 if name in exclude:
                     i+=1
                     continue
-                # if type(child) == torch.nn.modules.conv.Conv2d and i in layers:
                 if i in layers or name in layers or type(child) in layers:
-                    # if return_error:
-                    #     layer, error = factorize_layer(child, **kwargs)
-                    #     if verbose:
-                    #         print(error)
-                    # else:
-                    #     layer = 
                     m._modules[name] = factorize_layer(child, return_error=return_error, **kwargs)
                 try:
-                    # if verbose and return_error:
-                    #     print((i, error))
                     output[name] = (i, nested_children(child, **kwargs) )
                 except TypeError:
                     output[name] = (i, nested_children(child, **kwargs) )
-        return output #, errors
+        return output
     out = nested_children(model, **kwargs)
 
     if return_error:
@@ -179,3 +174,20 @@ def listify_numbered_layers(numbered_layers, layer_names=[], layer_nrs=[]):
     parse_errors(numbered_layers)
     
     return output
+
+
+def get_weights(model, layer_nrs=RESNET_LAYERS):
+    numbered_layers = number_layers(model)
+    listed_layers = listify_numbered_layers(numbered_layers=numbered_layers, layer_nrs=layer_nrs)
+    return {nr:layer.weight for name,nr,layer in listed_layers}
+
+
+def factorize_network_with_ranks(model, layers, ranks, **kwargs):
+    
+    for layer, rank in zip(layers, ranks):
+        print(layer)
+        print(rank)
+        layer_nr = layer
+        factorize_network(model, layers=[layer_nr], rank=rank, **kwargs)
+    
+    # return model

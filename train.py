@@ -20,6 +20,7 @@ from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 from torchvision.models import resnet18 
 
+from tddl.dbs import find_error_given_c
 from tddl.data.loaders import fetch_loaders
 from tddl.models.resnet_torch import get_resnet_from_torch
 from tddl.models.cnn import GaripovNet, JaderbergNet
@@ -31,7 +32,10 @@ from tddl.utils.random import set_seed
 from tddl.utils.hardware import select_hardware
 from tddl.models.utils import count_parameters
 from tddl.utils.checks import check_paths
+from tddl.factorizations import number_layers
+from tddl.factorizations import listify_numbered_layers
 from tddl.factorizations import factorize_network
+from tddl.factorizations import factorize_network_with_ranks
 from tddl.factorizations import list_errors
 from tddl.utils.typecast import typecast
 
@@ -195,7 +199,8 @@ def decompose(
     factorization: str = 'tucker',
     decompose_weights: bool = True,
     td_init: float = None, # 0.02
-    rank: float = 0.5,
+    rank: float = 0.5, #: float or list
+    different_ranks: bool = False,
     epochs: int = 200,
     lr: float = 0.1,
     logdir: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist"),
@@ -266,21 +271,47 @@ def decompose(
     }
     writer = SummaryWriter(log_dir=logdir.joinpath('runs'))
 
-    
+    output = None
     if factorized_path is not None:
         model = torch.load(factorized_path)
-        output = None
     else:
         model = torch.load(baseline_path)
-        output = factorize_network(
-            model,
-            layers=layers,
-            factorization=factorization,
-            rank=rank,
-            decompose_weights=decompose_weights,
-            init_std=td_init,
-            return_error=return_error,
-        )
+        if different_ranks:
+            print(rank)
+            if type(rank) is not list:
+                baseline_count = count_parameters(model)
+                numbered_layers = number_layers(model)
+                listed_layers = listify_numbered_layers(numbered_layers, layer_nrs=layers)
+                rank, c, error = find_error_given_c(listed_layers, desired_c = rank, baseline_count=baseline_count)
+                dbs = {
+                    'rank':rank,
+                    # 'c':c,
+                    # 'error':error,
+                }
+                with open(logdir.joinpath('dbs.json'), 'w') as f:
+                    json.dump(dbs, f)
+            print(rank)
+            factorize_network_with_ranks(
+                model, 
+                layers, 
+                rank, 
+                factorization=factorization,
+                decompose_weights=decompose_weights,
+                init_std=td_init,
+                return_error=return_error,
+            )
+            print(model)
+        else:
+            output = factorize_network(
+                model,
+                layers=layers,
+                factorization=factorization,
+                rank=rank,
+                decompose_weights=decompose_weights,
+                init_std=td_init,
+                return_error=return_error,
+            )
+
     model.cuda() # needed for factorized training
     # Save the factorized model to the current logdir, also if it is loaded from another run
     torch.save(model, logdir / "model_after_fact.pth")
