@@ -1,7 +1,8 @@
-import copy
+from functools import lru_cache
 
 import torch
 import tltorch
+
 from tddl.utils.prime_factors import get_prime_factors
 from tddl.utils.approximation import calculate_relative_error
 
@@ -9,6 +10,7 @@ from tddl.utils.approximation import calculate_relative_error
 RESNET_LAYERS = [0,6,9,12,15,19,22,25,28,31,35,38,41,44,47,51,54,57,60,63,66]
 
 
+@lru_cache(maxsize=4096)
 def factorize_layer(
     module,
     factorization='tucker',

@@ -1,9 +1,16 @@
+from functools import lru_cache
+
 import torch
 
 from tddl.factorizations import factorize_layer
 from tddl.utils.model_stats import count_parameters
 
 
+# factorize_layer = lru_cache(factorize_layer, maxsize=None)
+# count_parameters = lru_cache(count_parameters)
+# factorize_layer.cache_clear()
+
+@lru_cache
 def find_rank_given_error(layer, desired_error, 
     rank = 0.5, 
     tollerance = 0.01, 
@@ -33,22 +40,35 @@ def find_rank_given_error(layer, desired_error,
         else:
             break
         # print("-"*10)
-    return fact_layer, rank, error
+    fact_count = count_parameters(fact_layer)
+    try:
+        print(f"{factorize_layer.cache_info() = }")
+    except:
+        pass
+    try:
+        print(f"{count_parameters.cache_info() = }")
+    except:
+        pass
+    return fact_count, rank, error
 
 
 def compress_layers_with_desired_error(layers, desired_error, baseline_count, *args, **kwargs):
-    fact_layers = []
+    # fact_layers = []
     ranks = []
     # param_count = 0
-    fact_count = 0
+    total_fact_count = 0
     for layer in layers:
         # param_count += count_parameters(layers[0][2])
-        fact_layer, rank, error = find_rank_given_error(layer[2], desired_error = desired_error, *args, **kwargs)
+        fact_count, rank, error = find_rank_given_error(layer[2], desired_error = desired_error, *args, **kwargs)
         ranks.append(rank)
-        fact_layers.append(fact_layer)
-        fact_count += count_parameters(fact_layer)
+        # fact_layers.append(fact_layer)
+        total_fact_count += fact_count
     # compression ratio of all layers
-    c = fact_count/baseline_count
+    c = total_fact_count/baseline_count
+    try:
+        print(f"{find_rank_given_error.cache_info() = }")
+    except:
+        pass
     return c, ranks, error
 
 
