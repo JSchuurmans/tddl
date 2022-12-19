@@ -3,6 +3,7 @@ import torch
 from tddl.factorizations import factorize_layer
 from tddl.utils.model_stats import count_parameters
 
+
 def find_rank_given_error(layer, desired_error, 
     rank = 0.5, 
     tollerance = 0.01, 
