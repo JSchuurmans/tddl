@@ -34,8 +34,13 @@ https://pytorch.org/tutorials/beginner/hyperparameter_tuning_tutorial.html
 
 
 
-## Reproduce
+# Reproduce 
 
+## ICLR 2023
+
+Link to latex: https://www.overleaf.com/project/6321df4c381ffd48c08a027f
+
+PDF: 
 
 ### Train baseline model
 
@@ -137,3 +142,15 @@ Run notebooks:
 ### Create plots
 Run notebook:
 `notebooks/results/kendalls_tau.ipynb`
+
+
+## ICML - Global compression
+
+Link to latex: https://www.overleaf.com/project/6397024bb070ec521aadb28d
+
+
+
+## Tech Report on initialization & Fine-tuning
+
+Link to latex: https://www.overleaf.com/project/6179366dd37ad23166523d27
+
