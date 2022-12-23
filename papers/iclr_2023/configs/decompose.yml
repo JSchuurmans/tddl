@@ -1,0 +1,40 @@
+# model
+model_name: parn
+baseline_path: "/scratch/jetzeschuurman/f_mnist/logs/parn_18_d0.5_256_sgd_l0.1_g0.1_sTrue/1633280228/cnn_best"
+
+# training
+batch: 256
+epochs: 25
+lr: 1.0e-2
+gamma: 0.9
+
+# factorization
+decompose_weights: True
+factorization: tucker
+rank: 0.75
+layers:
+  - 5
+  - 7
+  - 11
+  - 13
+  - 18
+  - 20
+  - 25
+  - 27
+  - 32
+  - 34
+  - 39
+  - 41
+  - 46
+  - 48
+  - 53
+  - 55
+
+# datalogging
+data_dir: "/scratch/jetzeschuurman/f_mnist/data" 
+logdir: "/scratch/jetzeschuurman/f_mnist/logs" 
+
+# hardware
+data_workers: 2
+cuda: "3"
+cpu: "2"

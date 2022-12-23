@@ -1,0 +1,23 @@
+# data
+dataset: cifar10
+
+# model
+model_name: rn18
+
+# training
+batch: 128
+epochs: 200
+optimizer: 'adam'
+lr: 1.0e-3
+gamma: 0.1
+milestones:
+- 100
+- 150
+weight_decay: 0
+
+# datalogging
+data_dir: "/bigdata/cifar10" 
+logdir: "/bigdata/cifar10/logs/baselines" 
+
+# hardware
+data_workers: 4

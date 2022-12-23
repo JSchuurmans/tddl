@@ -4,9 +4,15 @@ Tensor Decomposition for Deep Learning
 
 ## Install Guide
 
-Install pytorch `pip install torch==1.7.1+cu101 torchvision==0.8.2+cu101 torchaudio==0.7.2 -f https://download.pytorch.org/whl/torch_stable.html`
+### Install pytorch 
+```bash
+pip install torch==1.7.1+cu101 torchvision==0.8.2+cu101 torchaudio==0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
+```
 
-Install tddl `pip install -e ."[dev]"`
+### Install tddl 
+```
+pip install -e ."[dev]"
+```
 
 
 ## Getting started
@@ -32,39 +38,44 @@ To know how the layers are numbered, we provide the utility function `number_lay
 https://pytorch.org/tutorials/beginner/hyperparameter_tuning_tutorial.html
 
 
-
+`python -m train.py --config-path configs/tune.yml`
 
 # Reproduce 
 
 ## ICLR 2023
 
-Link to latex: https://www.overleaf.com/project/6321df4c381ffd48c08a027f
-
-PDF: 
+Links:
+- [Latex](https://www.overleaf.com/project/6321df4c381ffd48c08a027f)
+- [PDF](papers/iclr_2023/Schuurmans et al (2023) How informative is the approximation error.pdf)
+- [OpenReview](https://openreview.net/forum?id=sKHqgFOaFXI&referrer=%5BAuthor%20Console%5D(%2Fgroup%3Fid%3DICLR.cc%2F2023%2FConference%2FAuthors%23your-submissions))
 
 ### Train baseline model
 
 #### Pretrain ResNet-18 on CIFAR-10
-`python train.py main --config-path configs/tud/cifar10/train_rn18.yml`
+```bash
+python train.py main --config-path papers/iclr_2023/configs/tud/cifar10/train_rn18.yml
+```
 
 #### Pretrain GaripovNet on CIFAR-10
-`python train.py main --config-path configs/tud/garipov/cifar10/train_garipov.yml`
+```bash
+python train.py main --config-path papers/iclr_2023/configs/tud/garipov/cifar10/train_garipov.yml
+```
 
 #### Pretrain GaripovNet on F-MNIST
-`python train.py main --config-path configs/tud/garipov/fmnist/train_garipov.yml`
-
-
+```bash
+python train.py main --config-path papers/iclr_2023/configs/tud/garipov/fmnist/train_garipov.yml
+```
 
 ### Factorize and Fine-tune
 Make sure the path to pretrained model is provided in config files. 
 
 #### Factorize with CP and Tucker and Fine-tune ResNet-18 on CIFAR-10
-```
+```bash
 for i in {1..5};
 do for LAYER in 15 19 28 38 41 44 60 63;
 do for RANK in 1 25 5 75 9; 
 do for FACT in cp tucker;
-do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/rn18/cifar10/decompose/dec-$FACT-r0.5-$LAYER.yml --data-workers=8 --rank=0.$RANK; 
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path papers/icrl_2023/configs/tud/rn18/cifar10/decompose/dec-$FACT-r0.5-$LAYER.yml --data-workers=8 --rank=0.$RANK; 
 done;
 done;
 done;
@@ -72,11 +83,11 @@ done
 ```
 
 #### Factorize with TT and Fine-tune ResNet-18 on CIFAR-10 
-```
+```bash
 for i in {1..5};
 do for LAYER in 15 19 28 38 41 44 60 63;
 do for RANK in 1 25 5 75 9; 
-do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/rn18/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4; 
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path papers/icrl_2023/configs/tud/rn18/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4; 
 done;
 done;
 done
@@ -84,12 +95,12 @@ done
 
 
 #### Factorize with CP and Tucker and Fine-tune GaripovNet on CIFAR-10 
-```
+```bash
 for i in {1..5};
 do for LAYER in 2 4 6 8 10;
 do for RANK in 1 25 5 75 9;
 do for FACT in cp tucker;    
-do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path configs/tud/garipov/fmnist/decompose/dec-cp-r0.5-$LAYER.yml --rank=0.$RANK --factorization=$FACT; 
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path papers/icrl_2023/configs/tud/garipov/fmnist/decompose/dec-cp-r0.5-$LAYER.yml --rank=0.$RANK --factorization=$FACT; 
 done;
 done;
 done;
@@ -97,11 +108,11 @@ done
 ```
 
 #### Factorize with TT and Fine-tune Garipov on CIFAR-10
-```
+```bash
 for i in {1..5};
 do for LAYER in 2 4 6 8 10;
 do for RANK in 1 25 5 75 9;
-do echo "{$i}-{$LAYER}-{$RANK}" && python train.py main --config-path configs/tud/garipov/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4;
+do echo "{$i}-{$LAYER}-{$RANK}" && python train.py main --config-path papers/icrl_2023/configs/tud/garipov/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4;
 done;
 done;
 done
@@ -109,11 +120,11 @@ done
 
 #### Factorize with TT and Fine-tune GaripovNet on F-MNIST
 
-```
+```bash
 for i in {1..5};
 do for LAYER in 2 4 6 8 10;
 do for RANK in 1 25 5 75 9;
-do echo "{$i}-{$LAYER}-{$RANK}" && python train.py main --config-path configs/tud/garipov/fmnist/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4;
+do echo "{$i}-{$LAYER}-{$RANK}" && python train.py main --config-path papers/icrl_2023/configs/tud/garipov/fmnist/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4;
 done;
 done;
 done
@@ -123,34 +134,62 @@ done
 ### Calculate Error on features
 
 #### ResNet-18 on CIFAR-10 for training dataset
-`python src/tddl/features/extract.py main /bigdata/cifar10/logs/decomposed --dataset cifar10 --split train --aggregate --skip-existing --data-workers 4`
+```bash
+python src/tddl/features/extract.py main /path/to/cifar10/logs/decomposed --dataset cifar10 --split train --aggregate --skip-existing --data-workers 8
+```
 
 #### GaripovNet on CIFAR-10 for training dataset
-`python src/tddl/features/extract.py main /bigdata/cifar10/logs/garipov/decomposed --dataset cifar10 --split train --aggregate --skip-existing --data-workers 8`
+```bash
+python src/tddl/features/extract.py main /bigdata/cifar10/logs/garipov/decomposed --dataset cifar10 --split train --aggregate --skip-existing --data-workers 8
+```
 
 #### GaripovNet on F-MNIST for training dataset
-`python src/tddl/features/extract.py main /bigdata/f_mnist/logs/garipov/decomposed --dataset fmnist --split train --aggregate --skip-existing --data-workers 8`
+```bash
+python src/tddl/features/extract.py main /bigdata/f_mnist/logs/garipov/decomposed --dataset fmnist --split train --aggregate --skip-existing --data-workers 8
+```
 
 
 ### Post process
-Run notebooks:
-- `notebooks/results/rn18_c10_approx_vs_perform_ci.ipynb`
-- `notebooks/results/gar_c10_appro_vs_perform_ci.ipynb`
-- `notebooks/results/gar_fm_appro_vs_perform_ci.ipynb`
+
+#### process_factorized_networks
+
+```bash
+python src/tddl/post_processing/factorized_model/process_factorized_networks --logdir /bigdata/cifar10/logs/decomposed --baseline_path /bigdata/cifar10/logs/baselines/1646668631/rn18_18_dNone_128_adam_l0.001_g0.1_w0.0_sTrue
+```
+
+```bash
+python src/tddl/post_processing/factorized_model/process_factorized_networks --logdir /bigdata/cifar10/logs/garipov/decomposed/ --baseline_path /bigdata/cifar10/logs/garipov/baselines/1647358615/gar_18_dNone_128_sgd_l0.1_g0.1_w0.0_sTrue
+```
+
+```bash
+python src/tddl/post_processing/factorized_model/process_factorized_networks --logdir /bigdata/f_mnist/logs/garipov/decomposed/ --baseline_path /bigdata/f_mnist/logs/garipov/baselines/1647955843/gar_18_dNone_128_sgd_l0.1_g0.1_w0.0_sTrue
+```
+
+
+
+
+#### Run notebooks
+- `papers/iclr_2023/notebooks/results/rn18_c10_approx_vs_perform_ci.ipynb`
+- `papers/iclr_2023/notebooks/results/gar_c10_appro_vs_perform_ci.ipynb`
+- `papers/iclr_2023/notebooks/results/gar_fm_appro_vs_perform_ci.ipynb`
+
 
 
 ### Create plots
 Run notebook:
-`notebooks/results/kendalls_tau.ipynb`
+`papers/iclr_2023/notebooks/results/kendalls_tau.ipynb`
 
+#### Plot in appendix
+`papers/iclr_2023/notebooks/results/rn18_c10_approx_vs_perform_ci.ipynb`
 
-## ICML - Global compression
+## DBS
 
 Link to latex: https://www.overleaf.com/project/6397024bb070ec521aadb28d
 
+Use the configs in: `papers/dbs/configs`
 
-
-## Tech Report on initialization & Fine-tuning
+## DVSF
 
 Link to latex: https://www.overleaf.com/project/6179366dd37ad23166523d27
 
+Use the configs in: `papers/factorized/configs`

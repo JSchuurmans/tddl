@@ -1,0 +1,20 @@
+# model
+model_name: rn18
+
+# training
+batch: 128
+epochs: 300
+optimizer: 'sgd'
+weight_decay: 1.0e-4
+lr: 1.0e-1
+gamma: 0.1
+milestones:
+- 150
+- 225
+
+# datalogging
+data_dir: "/bigdata/f_mnist" 
+logdir: "/bigdata/f_mnist/logs" 
+
+# hardware
+data_workers: 16

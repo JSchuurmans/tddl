@@ -3,10 +3,12 @@ import json
 from pathlib import Path
 
 import torch
+import typer
 
 from tddl.factorizations import number_layers
 from tddl.factorizations import listify_numbered_layers
 from tddl.utils.approximation import calculate_relative_error, calculate_scaled_error, calculate_error
+from tddl.post_processing.path_utils import logdir_to_paths
 
 
 def process_factorized_networks(paths, baseline_path):
@@ -101,3 +103,14 @@ def process_factorized_networks(paths, baseline_path):
         errors_path = path / 'results_approximation_error.json'
         with open(errors_path, 'w') as f:
             json.dump(errors_conv, f)
+
+
+def main(
+    logdir = Path("/bigdata/cifar10/logs/garipov/decomposed/"),
+    baseline_path = Path("/bigdata/cifar10/logs/garipov/baselines/1647358615/gar_18_dNone_128_sgd_l0.1_g0.1_w0.0_sTrue"),
+):
+    paths = logdir_to_paths(logdir)
+    process_factorized_networks(paths, baseline_path)
+
+if __name__ == "__main__":
+    typer.run(main)

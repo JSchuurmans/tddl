@@ -1,0 +1,32 @@
+# data
+dataset: cifar10
+
+# model
+model_name: rn18
+baseline_path: /bigdata/cifar10/logs/baselines/1646668631/rn18_18_dNone_128_adam_l0.001_g0.1_w0.0_sTrue/cnn_best.pth
+
+# training
+batch: 128
+epochs: 200
+optimizer: 'adam'
+lr: 1.0e-3
+gamma: 0.1
+milestones:
+- 100
+- 150
+weight_decay: 0
+
+# factorization
+factorization: 'cp'
+decompose_weights: false
+td_init: 0.02
+rank: 0.5
+layers:
+- 15
+
+# datalogging
+data_dir: "/bigdata/cifar10" 
+logdir: "/bigdata/cifar10/logs/factorized" 
+
+# hardware
+data_workers: 4
