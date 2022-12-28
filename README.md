@@ -40,6 +40,31 @@ https://pytorch.org/tutorials/beginner/hyperparameter_tuning_tutorial.html
 
 `python -m train.py --config-path configs/tune.yml`
 
+## Docker
+
+In the commands below:
+
+- \`pwd\` adds the path to the current directory. Make sure you are in the tddl folder where this repo is in. This adds the config files to the docker container.
+- `/source/to/data:/destination/to/data`: mounts the data directory to a destination inside the docker container. Modify this to your data path. E.g. we use `/bigdata:/bigdata` and have in the config files the data and log directories somewhere in `/bigdata/`, data:`/bigdata/cifar10/` logs: `/bigdata/cifar10/logs`.
+
+### Build yourself
+```
+docker build . -t tddl
+```
+
+```
+docker run -it -v `pwd`:`pwd` -v /source/to/data:/destination/to/data  --gpus all tddl
+```
+
+### Pull from DockerHub
+```
+docker pull jtsch/tddl:latest
+```
+
+```
+docker run -it -v `pwd`:`pwd` -v /source/to/data:/destination/to/data  --gpus all jtsch/tddl:latest
+```
+
 # Reproduce 
 
 ## ICLR 2023
@@ -182,14 +207,29 @@ Run notebook:
 #### Plot in appendix
 `papers/iclr_2023/notebooks/results/rn18_c10_approx_vs_perform_ci.ipynb`
 
-## DBS
+## [WIP] Double Binary Search (DBS)
 
 Link to latex: https://www.overleaf.com/project/6397024bb070ec521aadb28d
 
 Use the configs in: `papers/dbs/configs`
 
-## DVSF
+## [WIP] Decompose vs Factorize (DVSF)
 
 Link to latex: https://www.overleaf.com/project/6179366dd37ad23166523d27
 
-Use the configs in: `papers/factorized/configs`
+Use the configs in: `papers/dvsf/configs`
+
+To factorize a model (in this case layer 15) and train it run: 
+```bash
+python train.py main --config-path papers/dvsf/configs/rn18/cifar10/factorize/fac-tucker-r0.5-15.yml
+```
+
+To train a baseline model:
+```bash
+python train.py main --config-path papers/dvsf/configs/rn18/cifar10/train_baseline.yml
+```
+
+To decompose (in this case layer 15 of) the baseline model modify the path to the baseline model and run:
+```bash
+python train.py main --config-path papers/dvsf/configs/rn18/cifar10/decompose/dec-tucker-r0.5-15.yml
+```
