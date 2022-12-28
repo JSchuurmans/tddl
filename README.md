@@ -67,6 +67,9 @@ docker run -it -v `pwd`:`pwd` -v /source/to/data:/destination/to/data  --gpus al
 
 # Reproduce 
 
+The results are produced with Python 3.8.10, GCC 9.4.0, Ubuntu 20.04, CUDA 11.1, cuDNN 8.1.1.
+For specific package versions see the `requirements.txt`. Note that the `requirements.txt` is only used for documenting the versions and not the installation. Check `Install Guide` for instructions for installation.
+
 ## ICLR 2023
 
 Links:
