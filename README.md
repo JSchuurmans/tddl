@@ -103,7 +103,7 @@ for i in {1..5};
 do for LAYER in 15 19 28 38 41 44 60 63;
 do for RANK in 1 25 5 75 9; 
 do for FACT in cp tucker;
-do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path papers/icrl_2023/configs/tud/rn18/cifar10/decompose/dec-$FACT-r0.5-$LAYER.yml --data-workers=8 --rank=0.$RANK; 
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path papers/icrl_2023/configs/rn18/cifar10/decompose/dec-$FACT-r0.5-$LAYER.yml --data-workers=8 --rank=0.$RANK; 
 done;
 done;
 done;
@@ -115,7 +115,7 @@ done
 for i in {1..5};
 do for LAYER in 15 19 28 38 41 44 60 63;
 do for RANK in 1 25 5 75 9; 
-do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path papers/icrl_2023/configs/tud/rn18/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4; 
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path papers/icrl_2023/configs/rn18/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4; 
 done;
 done;
 done
@@ -128,7 +128,7 @@ for i in {1..5};
 do for LAYER in 2 4 6 8 10;
 do for RANK in 1 25 5 75 9;
 do for FACT in cp tucker;    
-do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path papers/icrl_2023/configs/tud/garipov/fmnist/decompose/dec-cp-r0.5-$LAYER.yml --rank=0.$RANK --factorization=$FACT; 
+do echo "{$i}-{$LAYER}-{$FACT}-{$RANK}" && python train.py main --config-path papers/icrl_2023/configs/garipov/fmnist/decompose/dec-cp-r0.5-$LAYER.yml --rank=0.$RANK --factorization=$FACT; 
 done;
 done;
 done;
@@ -140,7 +140,7 @@ done
 for i in {1..5};
 do for LAYER in 2 4 6 8 10;
 do for RANK in 1 25 5 75 9;
-do echo "{$i}-{$LAYER}-{$RANK}" && python train.py main --config-path papers/icrl_2023/configs/tud/garipov/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4;
+do echo "{$i}-{$LAYER}-{$RANK}" && python train.py main --config-path papers/icrl_2023/configs/garipov/cifar10/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4;
 done;
 done;
 done
@@ -152,7 +152,7 @@ done
 for i in {1..5};
 do for LAYER in 2 4 6 8 10;
 do for RANK in 1 25 5 75 9;
-do echo "{$i}-{$LAYER}-{$RANK}" && python train.py main --config-path papers/icrl_2023/configs/tud/garipov/fmnist/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4;
+do echo "{$i}-{$LAYER}-{$RANK}" && python train.py main --config-path papers/icrl_2023/configs/garipov/fmnist/decompose/dec-tt-r0.$RANK-$LAYER.yml --data-workers=4;
 done;
 done;
 done
@@ -163,7 +163,7 @@ done
 
 #### ResNet-18 on CIFAR-10 for training dataset
 ```bash
-python src/tddl/features/extract.py main /path/to/cifar10/logs/decomposed --dataset cifar10 --split train --aggregate --skip-existing --data-workers 8
+python src/tddl/features/extract.py main /bigdata/cifar10/logs/decomposed --dataset cifar10 --split train --aggregate --skip-existing --data-workers 8
 ```
 
 #### GaripovNet on CIFAR-10 for training dataset
@@ -182,15 +182,15 @@ python src/tddl/features/extract.py main /bigdata/f_mnist/logs/garipov/decompose
 #### process_factorized_networks
 
 ```bash
-python src/tddl/post_processing/factorized_model/process_factorized_networks --logdir /bigdata/cifar10/logs/decomposed --baseline_path /bigdata/cifar10/logs/baselines/1646668631/rn18_18_dNone_128_adam_l0.001_g0.1_w0.0_sTrue
+python src/tddl/post_processing/factorized_model.py --logdir /bigdata/cifar10/logs/decomposed --baseline-path /bigdata/cifar10/logs/baselines/1646668631/rn18_18_dNone_128_adam_l0.001_g0.1_w0.0_sTrue
 ```
 
 ```bash
-python src/tddl/post_processing/factorized_model/process_factorized_networks --logdir /bigdata/cifar10/logs/garipov/decomposed/ --baseline_path /bigdata/cifar10/logs/garipov/baselines/1647358615/gar_18_dNone_128_sgd_l0.1_g0.1_w0.0_sTrue
+python src/tddl/post_processing/factorized_model.py --logdir /bigdata/cifar10/logs/garipov/decomposed/ --baseline_path /bigdata/cifar10/logs/garipov/baselines/1647358615/gar_18_dNone_128_sgd_l0.1_g0.1_w0.0_sTrue
 ```
 
 ```bash
-python src/tddl/post_processing/factorized_model/process_factorized_networks --logdir /bigdata/f_mnist/logs/garipov/decomposed/ --baseline_path /bigdata/f_mnist/logs/garipov/baselines/1647955843/gar_18_dNone_128_sgd_l0.1_g0.1_w0.0_sTrue
+python src/tddl/post_processing/factorized_model.py --logdir /bigdata/f_mnist/logs/garipov/decomposed/ --baseline_path /bigdata/f_mnist/logs/garipov/baselines/1647955843/gar_18_dNone_128_sgd_l0.1_g0.1_w0.0_sTrue
 ```
 
 

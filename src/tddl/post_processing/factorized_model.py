@@ -106,8 +106,8 @@ def process_factorized_networks(paths, baseline_path):
 
 
 def main(
-    logdir = Path("/bigdata/cifar10/logs/garipov/decomposed/"),
-    baseline_path = Path("/bigdata/cifar10/logs/garipov/baselines/1647358615/gar_18_dNone_128_sgd_l0.1_g0.1_w0.0_sTrue"),
+    logdir: Path = Path("/bigdata/cifar10/logs/garipov/decomposed/"),
+    baseline_path: Path = Path("/bigdata/cifar10/logs/garipov/baselines/1647358615/gar_18_dNone_128_sgd_l0.1_g0.1_w0.0_sTrue"),
 ):
     paths = logdir_to_paths(logdir)
     process_factorized_networks(paths, baseline_path)
