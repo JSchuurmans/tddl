@@ -194,21 +194,39 @@ python src/tddl/post_processing/factorized_model.py --logdir /bigdata/f_mnist/lo
 ```
 
 
+#### Create Tables
 
+```bash
+python src/tddl/post_processing/create_tables.py \
+--logdir /bigdata/cifar10/logs/decomposed \
+--output papers/iclr_2023/tables/rn18/cifar10/ \
+--tt-conversion papers/iclr_2023/configs/rn18/rn18_tt_actual_rank_to_tl_ranks.json \
+--model rn18 \
+--dataset c10
+```
 
-#### Run notebooks
-- `papers/iclr_2023/notebooks/results/rn18_c10_approx_vs_perform_ci.ipynb`
-- `papers/iclr_2023/notebooks/results/gar_c10_appro_vs_perform_ci.ipynb`
-- `papers/iclr_2023/notebooks/results/gar_fm_appro_vs_perform_ci.ipynb`
+```bash
+python src/tddl/post_processing/create_tables.py \
+--logdir /bigdata/cifar10/logs/garipov/decomposed \
+--output papers/iclr_2023/tables/gar/cifar10/ \
+--tt-conversion papers/iclr_2023/configs/garipov/gar_tt_actual_rank_to_tl_ranks.json \
+--model gar \
+--dataset c10
+```
 
-
+```bash
+python src/tddl/post_processing/create_tables.py \
+--logdir /bigdata/f_mnist/logs/garipov/decomposed \
+--output papers/iclr_2023/tables/gar/f_mnist/ \
+--tt-conversion papers/iclr_2023/configs/garipov/gar_tt_actual_rank_to_tl_ranks.json \
+--model gar \
+--dataset fm
+```
 
 ### Create plots
 Run notebook:
 `papers/iclr_2023/notebooks/results/kendalls_tau.ipynb`
 
-#### Plot in appendix
-`papers/iclr_2023/notebooks/results/rn18_c10_approx_vs_perform_ci.ipynb`
 
 ## [WIP] Double Binary Search (DBS)
 
