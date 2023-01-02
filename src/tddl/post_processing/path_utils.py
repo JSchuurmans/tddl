@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
+
 def logdir_to_paths(logdir: Path):
 
     paths = []
@@ -15,7 +16,8 @@ def logdir_to_paths(logdir: Path):
             if 'lr' in subfolder:
                 if (logdir / folder / subfolder / "results.json").exists():
                     paths.append( logdir / folder / subfolder )
-
+                else:
+                    print(f'"results.json" does not exist in {logdir / folder / subfolder}')
     return paths
 
 
