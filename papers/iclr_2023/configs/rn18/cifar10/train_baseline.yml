@@ -17,7 +17,7 @@ weight_decay: 0
 
 # datalogging
 data_dir: "/bigdata/cifar10" 
-logdir: "/bigdata/cifar10/logs/baselines" 
+logdir: "/bigdata/cifar10/logs/rn18/baselines" 
 
 # hardware
 data_workers: 4

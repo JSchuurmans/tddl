@@ -21,7 +21,7 @@ layers:
 
 # datalogging
 data_dir: "/bigdata/cifar10" 
-logdir: "/bigdata/cifar10/logs/decomposed/tt" 
+logdir: "/bigdata/cifar10/logs/rn18/decomposed" 
 
 # hardware
 data_workers: 8

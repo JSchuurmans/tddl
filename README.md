@@ -163,7 +163,7 @@ done
 
 #### ResNet-18 on CIFAR-10 for training dataset
 ```bash
-python src/tddl/features/extract.py main /bigdata/cifar10/logs/decomposed --dataset cifar10 --split train --aggregate --skip-existing --data-workers 8
+python src/tddl/features/extract.py main /bigdata/cifar10/logs/rn18/decomposed --dataset cifar10 --split train --aggregate --skip-existing --data-workers 8
 ```
 
 #### GaripovNet on CIFAR-10 for training dataset
@@ -182,7 +182,7 @@ python src/tddl/features/extract.py main /bigdata/f_mnist/logs/garipov/decompose
 #### process_factorized_networks
 
 ```bash
-python src/tddl/post_processing/factorized_model.py --logdir /bigdata/cifar10/logs/decomposed --baseline-path /bigdata/cifar10/logs/baselines/1646668631/rn18_18_dNone_128_adam_l0.001_g0.1_w0.0_sTrue
+python src/tddl/post_processing/factorized_model.py --logdir /bigdata/cifar10/logs/rn18/decomposed --baseline-path /bigdata/cifar10/logs/rn18/baselines/1646668631/rn18_18_dNone_128_adam_l0.001_g0.1_w0.0_sTrue
 ```
 
 ```bash
@@ -198,7 +198,7 @@ python src/tddl/post_processing/factorized_model.py --logdir /bigdata/f_mnist/lo
 
 ```bash
 python src/tddl/post_processing/create_tables.py \
---logdir /bigdata/cifar10/logs/decomposed \
+--logdir /bigdata/cifar10/logs/rn18/decomposed \
 --output papers/iclr_2023/tables/rn18/cifar10/ \
 --tt-conversion papers/iclr_2023/configs/rn18/rn18_tt_actual_rank_to_tl_ranks.json \
 --model rn18 \
