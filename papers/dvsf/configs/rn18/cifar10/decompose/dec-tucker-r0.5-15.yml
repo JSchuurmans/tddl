@@ -7,7 +7,7 @@ baseline_path: /bigdata/cifar10/logs/baselines/1646668631/rn18_18_dNone_128_adam
 
 # training
 batch: 128
-epochs: 10
+epochs: 25
 optimizer: 'adam'
 lr: 1.0e-5
 gamma: 0
@@ -15,32 +15,13 @@ gamma: 0
 # factorization
 factorization: 'tucker'
 decompose_weights: true
-different_ranks: true
-rank: 0.1
+rank: 0.5
 layers:
-- 6
-- 9
-- 12
 - 15
-- 19
-- 22
-- 25
-- 28
-- 31
-- 35
-- 38
-- 41
-- 44
-- 47
-- 51
-- 54
-- 57
-- 60
-- 63
 
 # datalogging
 data_dir: "/bigdata/cifar10" 
-logdir: "/bigdata/cifar10/logs/rn18/dbs" 
+logdir: "/bigdata/cifar10/logs/decomposed" 
 
 # hardware
 data_workers: 8

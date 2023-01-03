@@ -1,7 +1,9 @@
 from typing import get_type_hints
 from pathlib import Path
 
+
 SUPPORTED_TYPES = [str, float, int, Path, bool]
+
 
 def typecast(func):
     typeof = get_type_hints(func)

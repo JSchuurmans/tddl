@@ -1,5 +1,6 @@
 import seaborn as sns
 
+
 def bar_diff(
     df,
     x = "layer_nr",

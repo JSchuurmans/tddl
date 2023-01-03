@@ -83,21 +83,21 @@ Baseline models can be found at: https://webdata.tudelft.nl/staff-umbrella/Intel
 
 #### Pretrain ResNet-18 on CIFAR-10
 ```bash
-python train.py main --config-path papers/iclr_2023/configs/tud/cifar10/train_rn18.yml
+python train.py main --config-path papers/iclr_2023/configs/rn18/cifar10/train_baseline.yml
 ```
 
 #### Pretrain GaripovNet on CIFAR-10
 ```bash
-python train.py main --config-path papers/iclr_2023/configs/tud/garipov/cifar10/train_garipov.yml
+python train.py main --config-path papers/iclr_2023/configs/garipov/cifar10/train_garipov.yml
 ```
 
 #### Pretrain GaripovNet on F-MNIST
 ```bash
-python train.py main --config-path papers/iclr_2023/configs/tud/garipov/fmnist/train_garipov.yml
+python train.py main --config-path papers/iclr_2023/configs/garipov/fmnist/train_garipov.yml
 ```
 
 ### Factorize and Fine-tune
-Make sure the path to pretrained model is provided in config files. The configs with the random seeds used in the paper can be found at `papers/icrl_2023/reproduce`. Below are the scripts used to run the experiments.
+Make sure the path to pretrained model is provided in config files. Below are the scripts used to run the experiments.
 
 #### Factorize with CP and Tucker and Fine-tune ResNet-18 on CIFAR-10
 ```bash

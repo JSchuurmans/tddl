@@ -1,5 +1,6 @@
 import os
 
+
 def select_hardware(
     cuda: str = None,
     cpu: str = None,
