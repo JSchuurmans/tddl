@@ -79,6 +79,8 @@ Links:
 
 ### Train baseline model
 
+Baseline models can be found at: https://webdata.tudelft.nl/staff-umbrella/IntelligentVehicles%20Research/Data/jetzeschuurman/
+
 #### Pretrain ResNet-18 on CIFAR-10
 ```bash
 python train.py main --config-path papers/iclr_2023/configs/tud/cifar10/train_rn18.yml
@@ -95,7 +97,7 @@ python train.py main --config-path papers/iclr_2023/configs/tud/garipov/fmnist/t
 ```
 
 ### Factorize and Fine-tune
-Make sure the path to pretrained model is provided in config files. 
+Make sure the path to pretrained model is provided in config files. The configs with the random seeds used in the paper can be found at `papers/icrl_2023/reproduce`. Below are the scripts used to run the experiments.
 
 #### Factorize with CP and Tucker and Fine-tune ResNet-18 on CIFAR-10
 ```bash
