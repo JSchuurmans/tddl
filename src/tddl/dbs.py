@@ -103,4 +103,7 @@ def find_error_given_c(layers, desired_c,
         else:
             break
         print("-"*10)
+    else:
+        print(f"The maximum number of iterations {max_iter} has been reached")
+    
     return ranks, c, achieved_error

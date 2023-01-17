@@ -35,7 +35,7 @@ from tddl.utils.checks import check_paths
 from tddl.factorizations import number_layers
 from tddl.factorizations import listify_numbered_layers
 from tddl.factorizations import factorize_network
-from tddl.factorizations import factorize_network_with_ranks
+from tddl.factorizations import factorize_network_different_ranks
 from tddl.factorizations import list_errors
 from tddl.utils.typecast import typecast
 
@@ -201,6 +201,8 @@ def decompose(
     td_init: float = None, # 0.02
     rank: float = 0.5, #: float or list
     different_ranks: bool = False,
+    cache: bool = True,
+    factorize_rank_1: bool = True,
     epochs: int = 200,
     lr: float = 0.1,
     logdir: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist"),
@@ -291,7 +293,7 @@ def decompose(
                 with open(logdir.joinpath('dbs.json'), 'w') as f:
                     json.dump(dbs, f)
             print(rank)
-            factorize_network_with_ranks(
+            factorize_network_different_ranks(
                 model, 
                 layers, 
                 rank, 

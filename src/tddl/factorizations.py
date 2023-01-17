@@ -184,12 +184,7 @@ def get_weights(model, layer_nrs=RESNET_LAYERS):
     return {nr:layer.weight for name,nr,layer in listed_layers}
 
 
-def factorize_network_with_ranks(model, layers, ranks, **kwargs):
+def factorize_network_different_ranks(model, layers, ranks, **kwargs):
     
-    for layer, rank in zip(layers, ranks):
-        print(layer)
-        print(rank)
-        layer_nr = layer
+    for layer_nr, rank in zip(layers, ranks):
         factorize_network(model, layers=[layer_nr], rank=rank, **kwargs)
-    
-    # return model
