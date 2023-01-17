@@ -107,3 +107,11 @@ def find_error_given_c(layers, desired_c,
         print(f"The maximum number of iterations {max_iter} has been reached")
     
     return ranks, c, achieved_error
+
+
+def undo_factorize_rank_1(layers, ranks):
+    #TODO rounding of rank?
+    layers = [l for l,r in zip(layers,ranks) if r != 1.0]
+    ranks = [r for r in ranks if r != 1.0]
+
+    return layers, ranks

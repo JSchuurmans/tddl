@@ -21,6 +21,7 @@ from ray.tune.schedulers import ASHAScheduler
 from torchvision.models import resnet18 
 
 from tddl.dbs import find_error_given_c
+from tddl.dbs import undo_factorize_rank_1
 from tddl.data.loaders import fetch_loaders
 from tddl.models.resnet_torch import get_resnet_from_torch
 from tddl.models.cnn import GaripovNet, JaderbergNet
@@ -201,8 +202,9 @@ def decompose(
     td_init: float = None, # 0.02
     rank: float = 0.5, #: float or list
     different_ranks: bool = False,
-    cache: bool = True,
-    factorize_rank_1: bool = True,
+    cache: bool = True, #TODO
+    factorize_rank_1: bool = True, #TODO
+    bound_search: bool = False, #TODO
     epochs: int = 200,
     lr: float = 0.1,
     logdir: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist"),
@@ -293,6 +295,8 @@ def decompose(
                 with open(logdir.joinpath('dbs.json'), 'w') as f:
                     json.dump(dbs, f)
             print(rank)
+            if not factorize_rank_1:
+                layers, rank = undo_factorize_rank_1(layers,rank)
             factorize_network_different_ranks(
                 model, 
                 layers, 
