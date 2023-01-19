@@ -1,11 +1,12 @@
 from functools import lru_cache
 
 import torch
+import numpy as np
 
 from tddl.factorizations import factorize_layer
 from tddl.utils.model_stats import count_parameters
-
-
+from tddl.factorizations import number_layers, listify_numbered_layers, get_weights
+from tddl.factorizations import factorize_layer
 # factorize_layer = lru_cache(factorize_layer, maxsize=None)
 # count_parameters = lru_cache(count_parameters)
 # factorize_layer.cache_clear()
@@ -115,3 +116,14 @@ def undo_factorize_rank_1(layers, ranks):
     ranks = [r for r in ranks if r != 1.0]
 
     return layers, ranks
+
+
+def get_errors_given_c(model, layers, compression_level):
+    numbered_layers = number_layers(model)
+    layers = listify_numbered_layers(numbered_layers, layer_nrs=layers)
+    errors = np.ndarray([])
+    for layer in layers:
+        with torch.no_grad():
+            fact_layer, error = factorize_layer(layer[2], 'tucker', compression_level, return_error=True)
+        errors = np.append(errors, float(error.cpu().numpy()))
+    return errors

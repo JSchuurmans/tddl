@@ -1,6 +1,6 @@
 import json
 import os
-from time import time
+from time import time, perf_counter
 from pathlib import Path
 from typing import List, Union
 from functools import partial
@@ -22,6 +22,7 @@ from torchvision.models import resnet18
 
 from tddl.dbs import find_error_given_c
 from tddl.dbs import undo_factorize_rank_1
+from tddl.dbs import get_errors_given_c
 from tddl.data.loaders import fetch_loaders
 from tddl.models.resnet_torch import get_resnet_from_torch
 from tddl.models.cnn import GaripovNet, JaderbergNet
@@ -171,20 +172,31 @@ def train(
         train_loader, valid_loader, test_loader,
         model, optimizer, writer, scheduler=scheduler, save=save
     )
+    start_training = perf_counter()
     results = trainer.train(epochs=epochs)
+    end_training = perf_counter()
+    training_time = start_training - end_training
+    results['training_time'] = training_time
+    results['training_time_per_epoch'] = training_time/epochs
+    writer.add_scalar("Timing/training", training_time)
+    writer.add_scalar("Timing/training_per_epoch", training_time/epochs)
 
     # this uses final model, need to use best model
     # test_acc, test_loss = trainer.test(loader=test_loader)
     # load best model
     trainer.model = torch.load(Path(trainer.save_location) / f"{trainer.save_model_name}_best.pth")
     # test best model
+    start_inference_time = perf_counter()
     test_acc, test_loss = trainer.test(loader=test_loader)
+    inference_time = start_inference_time - perf_counter()
     # register test results
     results['test_acc'] = test_acc
     results['test_loss'] = test_loss
-
     results['n_param'] = n_param
     results['model_name'] = MODEL_NAME
+    results['inference_time'] = inference_time
+    writer.add_scalar("Timing/inference", inference_time)
+
     with open(logdir.joinpath('results.json'), 'w') as f:
         json.dump(results, f)
 
@@ -200,11 +212,14 @@ def decompose(
     factorization: str = 'tucker',
     decompose_weights: bool = True,
     td_init: float = None, # 0.02
-    rank: float = 0.5, #: float or list
+    rank: Union[float, List[float]] = 0.5, #: float or list
     different_ranks: bool = False,
-    cache: bool = True, #TODO
-    factorize_rank_1: bool = True, #TODO
-    bound_search: bool = False, #TODO
+    cache: bool = True,                         #TODO
+    factorize_rank_1: bool = True,
+    bound_search: bool = False,                 #TODO
+    error: float = 0.5,
+    error_max: float = 1.0,
+    error_min: float = 0.0,
     epochs: int = 200,
     lr: float = 0.1,
     logdir: Path = Path("/home/jetzeschuurman/gitProjects/phd/tddl/artifacts/f_mnist"),
@@ -279,24 +294,48 @@ def decompose(
     if factorized_path is not None:
         model = torch.load(factorized_path)
     else:
+        compression_log = {}
         model = torch.load(baseline_path)
+        start_compression_time = perf_counter()
         if different_ranks:
             print(rank)
+            if bound_search:
+                start_get_bounds = perf_counter()
+                errors = get_errors_given_c(model, layers, rank)
+                get_bounds_time = start_get_bounds - perf_counter()
+                compression_log['get_bounds_time'] = get_bounds_time
+                writer.add_scalar("Timing/get_bounds_time", get_bounds_time)
+
+                # overwrite input values of function `decompose()`
+                error = errors.mean()
+                max_error = errors.max()
+                min_error = errors.min()
             if type(rank) is not list:
                 baseline_count = count_parameters(model)
                 numbered_layers = number_layers(model)
                 listed_layers = listify_numbered_layers(numbered_layers, layer_nrs=layers)
-                rank, c, error = find_error_given_c(listed_layers, desired_c = rank, baseline_count=baseline_count)
-                dbs = {
-                    'rank':rank,
-                    # 'c':c,
-                    # 'error':error,
-                }
-                with open(logdir.joinpath('dbs.json'), 'w') as f:
-                    json.dump(dbs, f)
+                
+                start_find_ranks = perf_counter()
+                rank, c, error = find_error_given_c(
+                    listed_layers, 
+                    desired_c = rank, 
+                    baseline_count=baseline_count,
+                    error = error,
+                    max_error=max_error, 
+                    min_error=min_error,
+                )
+                finding_ranks_time = start_find_ranks - perf_counter()
+                compression_log['finding_ranks_time'] = finding_ranks_time
+                writer.add_scalar("Timing/finding_ranks_time", finding_ranks_time)
+            
             print(rank)
             if not factorize_rank_1:
+                # TODO: log which layers have relative rank 1.0 and end up not being factorized
+                print(f"layer before filtering 1.0: {layers}")
                 layers, rank = undo_factorize_rank_1(layers,rank)
+                print(f"layer after filtering 1.0: {layers}")
+            
+            start_factorize = perf_counter()
             factorize_network_different_ranks(
                 model, 
                 layers, 
@@ -306,8 +345,11 @@ def decompose(
                 init_std=td_init,
                 return_error=return_error,
             )
+            factorizing_time = start_factorize - perf_counter()
+
             print(model)
         else:
+            start_factorize = perf_counter()
             output = factorize_network(
                 model,
                 layers=layers,
@@ -317,6 +359,16 @@ def decompose(
                 init_std=td_init,
                 return_error=return_error,
             )
+            factorizing_time = start_factorize - perf_counter()
+
+        compression_time = start_compression_time - perf_counter()
+        compression_log['compression_time'] = compression_time
+        writer.add_scalar("Timing/compression_time", compression_time)
+        compression_log['factorizing_time'] = factorizing_time
+        writer.add_scalar("Timing/factorizing_time", factorizing_time)
+        compression_log['rank'] = rank
+        with open(logdir.joinpath('compression_log.json'), 'w') as f:
+            json.dump(compression_log, f)
 
     model.cuda() # needed for factorized training
     # Save the factorized model to the current logdir, also if it is loaded from another run
@@ -390,18 +442,28 @@ def decompose(
         with open(logdir.joinpath('results_before_training.json'), 'w') as f:
             json.dump(results_before_training, f)
 
+    start_training = perf_counter()
     results = trainer.train(epochs=epochs)
+    end_training = perf_counter()
+    training_time = start_training - end_training
+    results['training_time'] = training_time
+    writer.add_scalar("Timing/training", training_time)
+    results['training_time_per_epoch'] = training_time/epochs
+    writer.add_scalar("Timing/training_per_epoch", training_time/epochs)
     
     # load best model
     trainer.model = torch.load(Path(trainer.save_location) / f"{trainer.save_model_name}_best.pth")
     # test best model
+    start_inference_time = perf_counter()
     test_acc, test_loss = trainer.test(loader=test_loader)
+    inference_time = start_inference_time - perf_counter()
     # register test results
     results['test_acc'] = test_acc
     results['test_loss'] = test_loss
-
     results['model_name'] = MODEL_NAME
     results['n_param_fact'] = n_param
+    results['inference_time'] = inference_time
+    writer.add_scalar("Timing/inference", inference_time)
     # if decompose_weights:
     #     results['train_acc_before_ft'] = train_acc
     #     results['valid_acc_before_ft'] = valid_acc
