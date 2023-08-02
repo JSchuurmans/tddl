@@ -500,3 +500,46 @@ for RANK in 1 25 5 75 9;
 do echo "{$RANK}" && python train.py main --config-path configs/tud/rn18/cifar10/dbs/dbs-cp-r0.1-constant.yml --rank=0.$RANK; 
 done
 ```
+
+# 2023
+
+## 20 Jan
+
+### Pretrain ResNet-18 on CIFAR-10
+```bash
+python train.py main --config-path papers/dbs/configs/rn18/cifar10/train_baseline.yml --data-workers=8
+```
+
+### Test tucker with logging time
+python train.py main --config-path papers/dbs/configs/rn18/cifar10/dbs-tucker-r0.1.yml --rank=0.5 --logdir="/bigdata/cifar10/logs/rn18/dbs/tmp/tucker"
+
+### Test cp with logging time
+python train.py main --config-path papers/dbs/configs/rn18/cifar10/dbs-cp-r0.1.yml --rank=0.5 --logdir="/bigdata/cifar10/logs/rn18/dbs/tmp/cp"
+
+### Run DBS Tucker with new baseline
+```bash
+for RANK in 1 25 5 75 9;
+do echo "{$RANK}" && python train.py main --config-path papers/dbs/configs/rn18/cifar10/dbs-tucker-r0.1.yml --rank=0.$RANK --logdir="/bigdata/cifar10/logs/rn18/dbs/new_baseline/tucker"; 
+done
+```
+
+### Run constant compression with Tucker and new baseline
+```bash
+for RANK in 1 25 5 75 9;
+do echo "{$RANK}" && python train.py main --config-path papers/dbs/configs/rn18/cifar10/dbs-tucker-r0.1-constant.yml --rank=0.$RANK --logdir="/bigdata/cifar10/logs/rn18/constant/new_baseline/tucker"; 
+done
+```
+
+### Run DBS CP with new baseline
+```bash
+for RANK in 1 25 5 75 9;
+do echo "{$RANK}" && python train.py main --config-path papers/dbs/configs/rn18/cifar10/dbs-cp-r0.1.yml --rank=0.$RANK --logdir="/bigdata/cifar10/logs/rn18/dbs/new_baseline/cp"; 
+done
+```
+
+### Run constant compression with CP and new baseline
+```bash
+for RANK in 1 25 5 75 9;
+do echo "{$RANK}" && python train.py main --config-path papers/dbs/configs/rn18/cifar10/dbs-cp-r0.1-constant.yml --rank=0.$RANK --logdir="/bigdata/cifar10/logs/rn18/constant/new_baseline/cp"; 
+done
+```

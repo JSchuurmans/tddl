@@ -1,5 +1,6 @@
 import os
 from time import time
+from pathlib import Path
 
 import numpy as np
 from tqdm import tqdm, trange
@@ -7,12 +8,16 @@ import torch
 from torch.autograd import Variable
 from ray import tune
 
+from tddl.utils.gradients import plot_grad_flow
+
 
 class Trainer:
     def __init__(
         self, train_loader, valid_loader, test_loader,
         model, optimizer, writer, 
-        scheduler=None, save=None, results={}, tuning=False,**kwargs
+        scheduler=None, save=None, results={}, tuning=False,
+        plot_grad=None, plot_grad_path=None,
+        **kwargs
     ):
         self.train_data_loader = train_loader
         self.valid_loader = valid_loader
@@ -30,6 +35,9 @@ class Trainer:
         self.results = results
 
         self.tuning = tuning
+
+        self.plot_grad = plot_grad
+        self.plot_grad_path = plot_grad_path
 
         if save is None:
             self.save_every_epoch = None
@@ -139,6 +147,8 @@ class Trainer:
         loss = self.criterion(self.model(input), Variable(label))
         delta_batch = time() - start_batch
         loss.backward()
+        if self.plot_grad:
+            plot_grad_flow(self.model.named_parameters(), Path(self.plot_grad_path), self.iteration)
         self.optimizer.step()
 
         self.writer.add_scalar("Time/train/batch_in_sec", delta_batch, self.iteration)

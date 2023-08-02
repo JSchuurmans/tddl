@@ -3,7 +3,7 @@ dataset: cifar10
 
 # model
 model_name: rn18
-baseline_path: /bigdata/cifar10/logs/baselines/1646668631/rn18_18_dNone_128_adam_l0.001_g0.1_w0.0_sTrue/cnn_best.pth
+baseline_path: /bigdata/cifar10/logs/rn18/baselines/dbs/1674208520/rn18_18_dNone_128_adam_l0.001_g0.1_w0.0_sTrue/cnn_best.pth
 
 # training
 batch: 128
